@@ -1,8 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* Global font: DM Sans */
 body {
   margin: 0;
   font-family: var(
@@ -15,7 +12,7 @@ body {
   );
 }
 
-/* Mono font for the mint price only */
+/* Mono font for the main mint price ONLY */
 .font-mono-price {
   font-family: var(
     --font-dm-mono,
