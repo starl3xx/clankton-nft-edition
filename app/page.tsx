@@ -14,6 +14,7 @@ const TWEET_DISCOUNT = 1_000_000
 const FOLLOW_DISCOUNT = 500_000
 const MAX_SUPPLY = 50
 
+// Dec 3, 2025 00:00 UTC
 const MINT_START = Math.floor(Date.UTC(2025, 11, 3, 0, 0, 0) / 1000)
 const MINT_END = MINT_START + 7 * 24 * 60 * 60
 
@@ -88,7 +89,9 @@ export default function ClanktonMintPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address }),
       })
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
 
   const handleOpenCastIntent = () => {
@@ -112,7 +115,7 @@ export default function ClanktonMintPage() {
 
     window.open(
       `https://twitter.com/intent/tweet?text=${fullText}`,
-      "_blank"
+      "_blank",
     )
 
     setDiscounts((p) => ({ ...p, tweeted: true }))
@@ -157,7 +160,7 @@ export default function ClanktonMintPage() {
       setRemotePrice(Number(data.price))
       setStatusMessage("Discounts refreshed")
     } catch {
-      setStatusMessage("Could not refresh")
+      setStatusMessage("Could not refresh discounts")
     } finally {
       setLoading(false)
     }
@@ -172,11 +175,17 @@ export default function ClanktonMintPage() {
       await handleConnectWallet()
       return
     }
-    if (isEnded) return setStatusMessage("Mint ended")
-    if (isNotStarted) return setStatusMessage("Not live yet")
+    if (isEnded) {
+      setStatusMessage("Mint ended")
+      return
+    }
+    if (isNotStarted) {
+      setStatusMessage("Mint not live yet")
+      return
+    }
 
     setLoading(true)
-    setStatusMessage("Preparing mint...")
+    setStatusMessage("Preparing mint…")
 
     try {
       const res = await fetch("/api/mint-request", {
@@ -184,13 +193,13 @@ export default function ClanktonMintPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address }),
       })
-      const data = await res.json()
+      await res.json()
 
       await new Promise((r) => setTimeout(r, 1200))
 
-      setStatusMessage("Mint successful!")
+      setStatusMessage("Mint successful – enjoy your CLANKTON NFT")
     } catch {
-      setStatusMessage("Mint failed")
+      setStatusMessage("Mint failed – try again")
     } finally {
       setLoading(false)
     }
@@ -199,12 +208,11 @@ export default function ClanktonMintPage() {
   return (
     <div className="min-h-screen bg-[#8F80AA] text-white px-4 py-8">
       <div className="w-full max-w-lg mx-auto space-y-6">
-
-        {/* Header section */}
+        {/* Header */}
         <div className="flex gap-4">
           <div className="h-20 w-20 rounded-2xl overflow-hidden bg-[#33264D]">
             <Image
-              src="/clankton-purple.png"
+              src="/papercrane.jpg"
               alt="CLANKTON"
               width={80}
               height={80}
@@ -233,12 +241,14 @@ export default function ClanktonMintPage() {
           <div className="flex justify-between">
             <div className="text-sm text-white/80">Your price</div>
             <div className="text-right">
-              <div className="font-mono text-2xl">
+              <div className="text-2xl font-mono-price">
                 {formatClankton(effectivePrice)}{" "}
-                <span className="text-sm">CLANKTON</span>
+                <span className="text-sm tracking-wide font-sans">
+                  CLANKTON
+                </span>
               </div>
               <div className="text-[11px] text-white/70">
-                Base {formatClankton(BASE_PRICE)} − discounts{" "}
+                Base price {formatClankton(BASE_PRICE)} − discounts{" "}
                 {formatClankton(localDiscount)}
               </div>
             </div>
@@ -247,20 +257,31 @@ export default function ClanktonMintPage() {
           <div className="flex flex-wrap gap-2 text-[11px]">
             <DiscountPill label="Cast" value="-2,000,000" active={discounts.casted} />
             <DiscountPill label="Tweet" value="-1,000,000" active={discounts.tweeted} />
-            <DiscountPill label="@thepapercrane" value="-500,000" active={discounts.followTPC} />
-            <DiscountPill label="@starl3xx.eth" value="-500,000" active={discounts.followStar} />
-            <DiscountPill label="/clankton" value="-500,000" active={discounts.followChannel} />
+            <DiscountPill
+              label="@thepapercrane"
+              value="-500,000"
+              active={discounts.followTPC}
+            />
+            <DiscountPill
+              label="@starl3xx.eth"
+              value="-500,000"
+              active={discounts.followStar}
+            />
+            <DiscountPill
+              label="/clankton"
+              value="-500,000"
+              active={discounts.followChannel}
+            />
           </div>
         </div>
 
-        {/* Discount Header */}
+        {/* Discounts header */}
         <div className="text-[14px] text-white/90 tracking-wide text-center uppercase mt-1 mb-1 font-bold">
           ✨ Super easy mint discounts ✨
         </div>
 
-        {/* Discounts */}
+        {/* Discount actions */}
         <div className="space-y-3">
-
           <ActionRow
             icon={<Avatar src="/farcaster.jpg" alt="Farcaster" />}
             title="Cast about this mint"
@@ -321,24 +342,24 @@ export default function ClanktonMintPage() {
           </button>
         </div>
 
-        {/* Mint Buttons */}
+        {/* Mint buttons */}
         <div className="space-y-2">
           <button
-            className="w-full rounded-2xl bg-[#C9FF5B] text-black font-semibold px-4 py-3 text-center text-sm shadow-[0_0_30px_rgba(201,255,91,0.6)] hover:bg-[#D7FF86] transition disabled:opacity-50"
+            className="w-full rounded-2xl bg-[#C9FF5B] text-black font-semibold px-4 py-3 text-center text-sm shadow-[0_0_30px_rgba(201,255,91,0.6)] hover:bg-[#D7FF86] transition disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading || isEnded || isNotStarted}
             onClick={handleMint}
           >
             {isEnded
               ? "Mint ended"
               : isNotStarted
-              ? "Mint not live"
+              ? "Mint not live yet"
               : loading
               ? "Minting…"
               : "Mint with CLANKTON"}
           </button>
 
           <button
-            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 hover:bg-white/10 transition"
+            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 hover:bg:white/10 hover:bg-white/10 transition"
             onClick={handleBuyClankton}
           >
             Buy CLANKTON
@@ -354,13 +375,12 @@ export default function ClanktonMintPage() {
             <span>How does this work?</span>
             <span className="text-white/70">{showHow ? "−" : "+"}</span>
           </button>
-
           {showHow && (
             <div className="px-4 pb-3 text-[11px] text-white/80 space-y-2">
-              <p>• When the mint goes live, anyone can mint until all 50 editions sell out. No whitelist.</p>
-              <p>• Discount actions only reduce price; they do not give priority.</p>
-              <p>• Mint is payable only in CLANKTON. NFT is standard ERC-721 on Base and tradable on secondary.</p>
-              <p>• If you take any discount actions, the miniapp can notify you when mint goes live.</p>
+              <p>• When the mint goes live, anyone can mint until all 50 editions are sold out. No whitelist.</p>
+              <p>• Discount actions only make your mint cheaper; they do not give priority.</p>
+              <p>• Mint is only payable in CLANKTON in this mini app. The NFT is a standard ERC-721 on Base and can be traded on secondary.</p>
+              <p>• If you perform any discount actions and have notifications enabled, the mini app can notify you when the mint is live.</p>
             </div>
           )}
         </div>
@@ -369,20 +389,23 @@ export default function ClanktonMintPage() {
         <div className="flex justify-between text-[11px] text-white/80 pt-1">
           <div>
             {address ? (
-              <>Connected: <span className="font-mono">{address}</span></>
+              <>
+                Connected: <span className="font-mono">{address}</span>
+              </>
             ) : (
               <button className="underline" onClick={handleConnectWallet}>
                 Connect wallet
               </button>
             )}
           </div>
-          {statusMessage && <div className="text-right max-w-[55%]">{statusMessage}</div>}
+          {statusMessage && (
+            <div className="text-right max-w-[55%]">{statusMessage}</div>
+          )}
         </div>
 
         <div className="text-[10px] text-white/70 text-right">
-          Discounts apply once per wallet. Payment in CLANKTON.
+          Discounts applied once per wallet. Payment in CLANKTON on Base.
         </div>
-
       </div>
     </div>
   )
@@ -393,12 +416,12 @@ function computeMintState(): MintState {
 
   if (now < MINT_START) {
     const total = MINT_START - now
-    return { phase: "before", ...breakdownSeconds(total), total }
+    return { phase: "before", total, ...breakdownSeconds(total) }
   }
 
   if (now <= MINT_END) {
     const total = MINT_END - now
-    return { phase: "active", ...breakdownSeconds(total), total }
+    return { phase: "active", total, ...breakdownSeconds(total) }
   }
 
   return { phase: "ended", total: 0, days: 0, hours: 0, minutes: 0, seconds: 0 }
@@ -419,23 +442,25 @@ function CountdownPill({
   mintState: MintState
   mintStartLabel: string
 }) {
-  if (mintState.phase === "ended")
+  if (mintState.phase === "ended") {
     return (
       <span className="px-2 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-100 text-[11px]">
         Mint ended
       </span>
     )
+  }
 
-  if (mintState.phase === "before")
+  if (mintState.phase === "before") {
     return (
       <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px]">
-        Mint begins {mintStartLabel} • in {mintState.days}d {mintState.hours}h{" "}
-        {mintState.minutes}m {mintState.seconds}s
+        Mint begins {mintStartLabel} • in {mintState.days}d{" "}
+        {mintState.hours}h {mintState.minutes}m {mintState.seconds}s
       </span>
     )
+  }
 
   return (
-    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px]">
+    <span className="px-2 py-1 rounded-full bg:white/15 bg-white/15 border border-white/35 text-[11px]">
       Mint ends in {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
       {mintState.seconds}s
     </span>
@@ -454,7 +479,9 @@ function EditionProgress({
   return (
     <div className="mt-2 space-y-1">
       <div className="flex justify-between text-[11px] text-white/85">
-        <span>{minted} / {maxSupply} minted</span>
+        <span>
+          {minted} / {maxSupply} minted
+        </span>
         <span>{Math.round(pct)}%</span>
       </div>
       <div className="h-1.5 rounded-full bg-white/20 overflow-hidden">
