@@ -53,6 +53,7 @@ export default function ClanktonMintPage() {
   const [minted] = useState(0)
   const [showHow, setShowHow] = useState(false)
 
+  // countdown
   useEffect(() => {
     const id = setInterval(() => setMintState(computeMintState()), 1000)
     return () => clearInterval(id)
@@ -103,7 +104,7 @@ export default function ClanktonMintPage() {
     window.open(`https://warpcast.com/~/compose?text=${fullText}`, "_blank")
 
     setDiscounts((p) => ({ ...p, casted: true }))
-    setStatusMessage("Cast composer opened")
+    setStatusMessage("Cast composer opened – don’t forget to post")
     registerDiscountAction()
   }
 
@@ -119,36 +120,41 @@ export default function ClanktonMintPage() {
     )
 
     setDiscounts((p) => ({ ...p, tweeted: true }))
-    setStatusMessage("Tweet composer opened")
+    setStatusMessage("Tweet composer opened – don’t forget to post")
     registerDiscountAction()
   }
 
   const handleFollowTPC = () => {
     window.open("https://farcaster.xyz/thepapercrane", "_blank")
     setDiscounts((p) => ({ ...p, followTPC: true }))
+    setStatusMessage("Opened @thepapercrane – make sure you follow")
     registerDiscountAction()
   }
 
   const handleFollowStar = () => {
     window.open("https://farcaster.xyz/starl3xx.eth", "_blank")
     setDiscounts((p) => ({ ...p, followStar: true }))
+    setStatusMessage("Opened @starl3xx.eth – make sure you follow")
     registerDiscountAction()
   }
 
   const handleFollowChannel = () => {
     window.open("https://farcaster.xyz/~/channel/clankton", "_blank")
     setDiscounts((p) => ({ ...p, followChannel: true }))
+    setStatusMessage("Opened /clankton – make sure you join")
     registerDiscountAction()
   }
 
   const refreshDiscountsFromServer = async () => {
     if (!address) {
-      setStatusMessage("Connect wallet first")
+      setStatusMessage("Connect your wallet first")
       return
     }
     setLoading(true)
+    setStatusMessage(null)
     try {
       const res = await fetch(`/api/user-discounts?address=${address}`)
+      if (!res.ok) throw new Error("Failed to fetch discounts")
       const data = await res.json()
       setDiscounts({
         casted: data.casted ?? false,
@@ -158,7 +164,7 @@ export default function ClanktonMintPage() {
         followChannel: data.followChannel ?? false,
       })
       setRemotePrice(Number(data.price))
-      setStatusMessage("Discounts refreshed")
+      setStatusMessage("Discounts refreshed from server")
     } catch {
       setStatusMessage("Could not refresh discounts")
     } finally {
@@ -176,7 +182,7 @@ export default function ClanktonMintPage() {
       return
     }
     if (isEnded) {
-      setStatusMessage("Mint ended")
+      setStatusMessage("Mint is over")
       return
     }
     if (isNotStarted) {
@@ -185,7 +191,7 @@ export default function ClanktonMintPage() {
     }
 
     setLoading(true)
-    setStatusMessage("Preparing mint…")
+    setStatusMessage("Preparing your mint…")
 
     try {
       const res = await fetch("/api/mint-request", {
@@ -193,11 +199,12 @@ export default function ClanktonMintPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address }),
       })
+      if (!res.ok) throw new Error("Failed to prepare mint")
       await res.json()
 
-      await new Promise((r) => setTimeout(r, 1200))
+      await new Promise((resolve) => setTimeout(resolve, 1200))
 
-      setStatusMessage("Mint successful – enjoy your CLANKTON NFT")
+      setStatusMessage("Mint successful – you’re now a CLANKTON enjoyooor")
     } catch {
       setStatusMessage("Mint failed – try again")
     } finally {
@@ -206,11 +213,12 @@ export default function ClanktonMintPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#8F80AA] text-white px-4 py-8">
-      <div className="w-full max-w-lg mx-auto space-y-6">
-        {/* Header */}
+    <div className="min-h-screen bg-[#8F80AA] text-white flex flex-col items-center px-4 py-8">
+      {/* centered card */}
+      <div className="w-full max-w-md rounded-3xl border border-[#33264D]/60 bg-[#6E6099]/80 p-5 space-y-5 shadow-[0_0_40px_rgba(25,10,50,0.7)]">
+        {/* Top: artwork + header */}
         <div className="flex gap-4">
-          <div className="h-20 w-20 rounded-2xl overflow-hidden bg-[#33264D]">
+          <div className="h-20 w-20 rounded-2xl bg-[#33264D] border border-white/25 overflow-hidden flex items-center justify-center">
             <Image
               src="/papercrane.jpg"
               alt="CLANKTON"
@@ -219,7 +227,6 @@ export default function ClanktonMintPage() {
               className="h-full w-full object-cover"
             />
           </div>
-
           <div className="flex-1 space-y-1">
             <div className="flex items-center justify-between text-[11px] uppercase tracking-wide">
               <span className="text-white/75">Edition of 50 • Base</span>
@@ -236,9 +243,9 @@ export default function ClanktonMintPage() {
           </div>
         </div>
 
-        {/* Price Card */}
-        <div className="rounded-2xl bg-[#33264D]/60 p-5 shadow-[0_4px_12px_rgba(255,255,255,0.15)] space-y-4">
-          <div className="flex justify-between">
+        {/* Price card */}
+        <div className="rounded-2xl bg-[#33264D]/70 border border-white/15 p-4 space-y-3">
+          <div className="flex items-start justify-between">
             <div className="text-sm text-white/80">Your price</div>
             <div className="text-right">
               <div className="text-2xl font-mono-price">
@@ -247,31 +254,41 @@ export default function ClanktonMintPage() {
                   CLANKTON
                 </span>
               </div>
-              <div className="text-[11px] text-white/70">
+              <div className="text-[11px] text-white/70 mt-1">
                 Base price {formatClankton(BASE_PRICE)} − discounts{" "}
                 {formatClankton(localDiscount)}
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 text-[11px]">
-            <DiscountPill label="Cast" value="-2,000,000" active={discounts.casted} />
-            <DiscountPill label="Tweet" value="-1,000,000" active={discounts.tweeted} />
-            <DiscountPill
-              label="@thepapercrane"
-              value="-500,000"
-              active={discounts.followTPC}
-            />
-            <DiscountPill
-              label="@starl3xx.eth"
-              value="-500,000"
-              active={discounts.followStar}
-            />
-            <DiscountPill
-              label="/clankton"
-              value="-500,000"
-              active={discounts.followChannel}
-            />
+          <div className="mt-3">
+            <div className="flex flex-wrap gap-2 text-[11px]">
+              <DiscountPill
+                label="Cast"
+                value="-2,000,000"
+                active={discounts.casted}
+              />
+              <DiscountPill
+                label="Tweet"
+                value="-1,000,000"
+                active={discounts.tweeted}
+              />
+              <DiscountPill
+                label="@thepapercrane"
+                value="-500,000"
+                active={discounts.followTPC}
+              />
+              <DiscountPill
+                label="@starl3xx.eth"
+                value="-500,000"
+                active={discounts.followStar}
+              />
+              <DiscountPill
+                label="/clankton"
+                value="-500,000"
+                active={discounts.followChannel}
+              />
+            </div>
           </div>
         </div>
 
@@ -280,7 +297,7 @@ export default function ClanktonMintPage() {
           ✨ Super easy mint discounts ✨
         </div>
 
-        {/* Discount actions */}
+        {/* Actions */}
         <div className="space-y-3">
           <ActionRow
             icon={<Avatar src="/farcaster.jpg" alt="Farcaster" />}
@@ -305,25 +322,31 @@ export default function ClanktonMintPage() {
           />
 
           <ActionRow
-            icon={<Avatar src="/papercrane.jpg" alt="@thepapercrane" />}
+            icon={<Avatar src="/papercrane.jpg" alt="@thepapercrane avatar" />}
             title="Follow @thepapercrane"
             description="Follow the artist on Farcaster for a 500,000 CLANKTON discount"
-            ctaLabel={discounts.followTPC ? "View profile" : "Follow on Farcaster"}
+            ctaLabel={
+              discounts.followTPC ? "View profile" : "Follow on Farcaster"
+            }
             onClick={handleFollowTPC}
             done={discounts.followTPC}
           />
 
           <ActionRow
-            icon={<Avatar src="/starl3xx.png" alt="@starl3xx.eth" />}
+            icon={<Avatar src="/starl3xx.png" alt="@starl3xx.eth avatar" />}
             title="Follow @starl3xx.eth"
             description="Follow the CLANKTON clanker for a 500,000 CLANKTON discount"
-            ctaLabel={discounts.followStar ? "View profile" : "Follow on Farcaster"}
+            ctaLabel={
+              discounts.followStar ? "View profile" : "Follow on Farcaster"
+            }
             onClick={handleFollowStar}
             done={discounts.followStar}
           />
 
           <ActionRow
-            icon={<Avatar src="/clankton-purple.png" alt="/clankton" />}
+            icon={
+              <Avatar src="/clankton-purple.png" alt="CLANKTON channel icon" />
+            }
             title="Follow /clankton channel"
             description="Join the CLANKTON channel for a 500,000 CLANKTON discount"
             ctaLabel={
@@ -334,15 +357,15 @@ export default function ClanktonMintPage() {
           />
 
           <button
-            className="w-full text-xs rounded-xl bg-transparent px-3 py-2 border border-white/30 hover:bg-white/10 transition disabled:opacity-60"
+            className="w-full text-xs rounded-xl border border-white/30 bg-transparent px-3 py-2 hover:bg-white/5 transition disabled:opacity-60"
             onClick={refreshDiscountsFromServer}
             disabled={loading}
           >
-            {loading ? "Refreshing…" : "Refresh my discounts"}
+            {loading ? "Refreshing…" : "Refresh my discounts (verifies on server)"}
           </button>
         </div>
 
-        {/* Mint buttons */}
+        {/* Mint + Buy buttons */}
         <div className="space-y-2">
           <button
             className="w-full rounded-2xl bg-[#C9FF5B] text-black font-semibold px-4 py-3 text-center text-sm shadow-[0_0_30px_rgba(201,255,91,0.6)] hover:bg-[#D7FF86] transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -359,15 +382,15 @@ export default function ClanktonMintPage() {
           </button>
 
           <button
-            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 hover:bg:white/10 hover:bg-white/10 transition"
+            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg-white/10 transition"
             onClick={handleBuyClankton}
           >
             Buy CLANKTON
           </button>
         </div>
 
-        {/* FAQ */}
-        <div className="rounded-2xl bg-[#33264D]/60 shadow-[0_4px_12px_rgba(255,255,255,0.12)]">
+        {/* How does this work? */}
+        <div className="rounded-2xl border border-white/20 bg-[#33264D]/70">
           <button
             className="w-full px-4 py-3 flex items-center justify-between text-xs text-white/85"
             onClick={() => setShowHow((v) => !v)}
@@ -377,16 +400,30 @@ export default function ClanktonMintPage() {
           </button>
           {showHow && (
             <div className="px-4 pb-3 text-[11px] text-white/80 space-y-2">
-              <p>• When the mint goes live, anyone can mint until all 50 editions are sold out. No whitelist.</p>
-              <p>• Discount actions only make your mint cheaper; they do not give priority.</p>
-              <p>• Mint is only payable in CLANKTON in this mini app. The NFT is a standard ERC-721 on Base and can be traded on secondary.</p>
-              <p>• If you perform any discount actions and have notifications enabled, the mini app can notify you when the mint is live.</p>
+              <p>
+                • When the mint goes live, anyone can mint an NFT until all 50
+                editions are sold out. There is no whitelist or allowlist.
+              </p>
+              <p>
+                • Discount actions only make your mint cheaper – they do not
+                give you priority or guarantee a spot.
+              </p>
+              <p>
+                • The mint in this mini app is only payable in CLANKTON. Once
+                you mint, your NFT is a standard ERC-721 token on Base and can
+                be traded on secondary marketplaces.
+              </p>
+              <p>
+                • If you perform any of the discount actions and have
+                notifications enabled, we’ll send you a Farcaster notification
+                when the mint is live.
+              </p>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-between text-[11px] text-white/80 pt-1">
+        {/* Footer: wallet + status */}
+        <div className="flex items-center justify-between text-[11px] text-white/80 pt-1">
           <div>
             {address ? (
               <>
@@ -416,20 +453,22 @@ function computeMintState(): MintState {
 
   if (now < MINT_START) {
     const total = MINT_START - now
-    return { phase: "before", total, ...breakdownSeconds(total) }
+    const parts = breakdownSeconds(total)
+    return { phase: "before", total, ...parts }
   }
 
   if (now <= MINT_END) {
     const total = MINT_END - now
-    return { phase: "active", total, ...breakdownSeconds(total) }
+    const parts = breakdownSeconds(total)
+    return { phase: "active", total, ...parts }
   }
 
   return { phase: "ended", total: 0, days: 0, hours: 0, minutes: 0, seconds: 0 }
 }
 
 function breakdownSeconds(total: number) {
-  const days = Math.floor(total / 86400)
-  const hours = Math.floor((total % 86400) / 3600)
+  const days = Math.floor(total / (24 * 3600))
+  const hours = Math.floor((total % (24 * 3600)) / 3600)
   const minutes = Math.floor((total % 3600) / 60)
   const seconds = total % 60
   return { days, hours, minutes, seconds }
@@ -444,7 +483,7 @@ function CountdownPill({
 }) {
   if (mintState.phase === "ended") {
     return (
-      <span className="px-2 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-100 text-[11px]">
+      <span className="px-2 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-500/40 text-[11px]">
         Mint ended
       </span>
     )
@@ -452,15 +491,15 @@ function CountdownPill({
 
   if (mintState.phase === "before") {
     return (
-      <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px]">
-        Mint begins {mintStartLabel} • in {mintState.days}d{" "}
-        {mintState.hours}h {mintState.minutes}m {mintState.seconds}s
+      <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px] text-white">
+        Mint begins {mintStartLabel} • in {mintState.days}d {mintState.hours}h{" "}
+        {mintState.minutes}m {mintState.seconds}s
       </span>
     )
   }
 
   return (
-    <span className="px-2 py-1 rounded-full bg:white/15 bg-white/15 border border-white/35 text-[11px]">
+    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px] text-white">
       Mint ends in {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
       {mintState.seconds}s
     </span>
@@ -478,7 +517,7 @@ function EditionProgress({
 }) {
   return (
     <div className="mt-2 space-y-1">
-      <div className="flex justify-between text-[11px] text-white/85">
+      <div className="flex items-center justify-between text-[11px] text-white/85">
         <span>
           {minted} / {maxSupply} minted
         </span>
@@ -505,10 +544,10 @@ function DiscountPill({
 }) {
   return (
     <div
-      className={`px-2 py-1 rounded-full text-[11px] flex items-center gap-1 ${
+      className={`px-2 py-1 rounded-full border text-[11px] flex items-center gap-1 ${
         active
-          ? "bg-[#C9FF5B]/20 text-[#E8FFD0] border border-[#C9FF5B]/40"
-          : "bg-white/10 text-white/70 border border-white/20"
+          ? "border-[#C9FF5B] bg-[#C9FF5B]/15 text-[#E8FFD0]"
+          : "border-white/30 text-white/70"
       }`}
     >
       <span>{label}</span>
@@ -527,23 +566,23 @@ function ActionRow(props: {
   done?: boolean
 }) {
   return (
-    <div className="rounded-2xl bg-[#33264D]/60 p-4 flex items-center gap-4 shadow-[0_4px_12px_rgba(255,255,255,0.12)]">
-      <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center overflow-hidden">
-        {props.icon}
-      </div>
-
+    <div className="rounded-2xl border border-white/25 bg-[#33264D]/70 p-3 flex items-center gap-3">
+      {props.icon && (
+        <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center border border-white/30 overflow-hidden shrink-0">
+          {props.icon}
+        </div>
+      )}
       <div className="flex-1">
         <div className="flex items-center gap-2">
           <div className="text-sm font-medium">{props.title}</div>
           {props.done && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#C9FF5B]/25 text-[#E8FFD0] border border-[#C9FF5B]/50">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#C9FF5B]/25 text-[#E8FFD0] border border-[#C9FF5B]/50">
               action taken
             </span>
           )}
         </div>
         <div className="text-xs text-white/80">{props.description}</div>
       </div>
-
       <button
         className="text-[11px] whitespace-nowrap rounded-xl bg-white text-[#33264D] px-3 py-2 font-semibold hover:bg-[#C9FF5B] transition"
         onClick={props.onClick}
@@ -559,9 +598,9 @@ function Avatar({ src, alt }: { src: string; alt: string }) {
     <Image
       src={src}
       alt={alt}
-      width={40}
-      height={40}
-      className="rounded-full h-full w-full object-cover"
+      width={28}
+      height={28}
+      className="h-full w-full object-cover"
     />
   )
 }
