@@ -24,6 +24,38 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+    <head>
+    export const metadata = {
+  title: "CLANKTON Mint",
+  description: "Mint thepapercrane × $CLANKTON NFT with social discounts.",
+  openGraph: {
+    title: "CLANKTON Mint",
+    description: "Mint thepapercrane × $CLANKTON NFT with social discounts.",
+    url: "https://clankton-nft-edition.vercel.app",
+    siteName: "CLANKTON Mint",
+    images: [
+      {
+        url: "https://clankton-nft-edition.vercel.app/clankton-banner.jpg",
+        width: 1200,
+        height: 630,
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CLANKTON Mint",
+    description: "Mint thepapercrane × $CLANKTON NFT with social discounts.",
+    images: ["https://clankton-nft-edition.vercel.app/clankton-banner.jpg"],
+  },
+};
+<meta property="fc:frame" content="vNext" />
+<meta property="fc:app" content="1" />
+<meta property="fc:miniapp:name" content="thepapercrane × $CLANKTON NFT" />
+<meta property="fc:miniapp:icon" content="https://clankton-nft-edition.vercel.app/clankton-purple.png" />
+<meta property="fc:miniapp:description" content="Mint thepapercrane × $CLANKTON NFT with social discounts." />
+<meta property="fc:miniapp:actions" content="launch" />
+    </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
