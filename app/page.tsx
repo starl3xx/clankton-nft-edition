@@ -212,10 +212,9 @@ export default function ClanktonMintPage() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-[#8F80AA] text-white flex flex-col items-center px-4 py-8">
-      {/* centered card */}
-      <div className="w-full max-w-md rounded-3xl border border-[#33264D]/60 bg-[#6E6099]/80 p-5 space-y-5 shadow-[0_0_40px_rgba(25,10,50,0.7)]">
+return (
+  <div className="min-h-screen bg-[#8F80AA] text-white px-4 py-8">
+    <div className="max-w-md mx-auto rounded-3xl border border-[#33264D]/60 bg-[#6E6099]/80 p-5 space-y-5 shadow-[0_0_40px_rgba(25,10,50,0.7)]">
         {/* Top: artwork + header */}
         <div className="flex gap-4">
           <div className="h-20 w-20 rounded-2xl bg-[#33264D] border border-white/25 overflow-hidden flex items-center justify-center">

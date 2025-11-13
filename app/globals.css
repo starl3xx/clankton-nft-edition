@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global font: DM Sans (from next/font via --font-dm-sans) */
+/* Global font: DM Sans */
 body {
   margin: 0;
   font-family: var(
