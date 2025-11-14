@@ -65,16 +65,3 @@ body {
     transform: translateX(140%);
   }
 }
-
-/* MOBILE FONT SCALE-UP */
-@media (max-width: 480px) {
-  html {
-    font-size: 17px; /* default is 16px → +12.5% */
-  }
-}
-
-@media (max-width: 380px) {
-  html {
-    font-size: 18px; /* slightly larger on very small screens */
-  }
-}
