@@ -9,6 +9,7 @@ import {
 import type React from "react"
 import Image from "next/image"
 import { useAccount, useBalance } from "wagmi"
+import { sdk } from "@farcaster/miniapp-sdk"
 
 const BASE_PRICE = 20_000_000
 const CAST_DISCOUNT = 2_000_000
@@ -87,12 +88,30 @@ export default function ClanktonMintPage() {
   const [showHow, setShowHow] = useState(false)
   const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [isMiniApp, setIsMiniApp] = useState(false)
 
   // countdown
   useEffect(() => {
     const id = setInterval(() => setMintState(computeMintState()), 1000)
     return () => clearInterval(id)
   }, [])
+  
+  // tell Farcaster mini app shell we're ready
+useEffect(() => {
+  if (typeof window === "undefined") return
+
+  const run = async () => {
+    try {
+      await sdk.actions.ready()
+      console.log("Mini App ready() called successfully")
+      setIsMiniApp(true)
+    } catch (err) {
+      console.error("Farcaster mini app ready() failed", err)
+    }
+  }
+
+  void run()
+}, [])
 
   const isEnded = mintState.phase === "ended"
   const isNotStarted = mintState.phase === "before"
