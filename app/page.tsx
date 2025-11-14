@@ -20,6 +20,8 @@ const MAX_SUPPLY = 50
 // CLANKTON ERC-20 on Base
 const CLANKTON_TOKEN_ADDRESS =
   "0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07" as `0x${string}`
+const CLANKTON_CAIP19 =
+  "eip155:8453/erc20:0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07"
 
 // Dec 3, 2025 00:00 UTC
 const MINT_START = Math.floor(Date.UTC(2025, 11, 3, 0, 0, 0) / 1000)
@@ -301,21 +303,22 @@ const handleFollowChannel = async () => {
   }
 
 const handleBuyClankton = async () => {
-  // URL for CLANKTON token – adjust if you have a better deep link
-  const clanktonUrl =
-    "https://app.uniswap.org/swap?outputCurrency=0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07&chain=base"
+  // Fallback URL for non-mini-app environments (desktop browser, etc.)
+  const fallbackUrl = "https://app.uniswap.org/swap?outputCurrency=0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07&chain=base"
 
   try {
     if (isMiniApp) {
-      // Ask the Warpcast wallet to open this URL in-app
-      await sdk.wallet.openUrl({ url: clanktonUrl })
+      // Inside Warpcast Mini App → open the CLANKTON token in the wallet
+      await sdk.actions.viewToken({
+        token: CLANKTON_CAIP19,
+      })
     } else {
-      // Regular browser fallback
-      window.open(clanktonUrl, "_blank")
+      // Regular browser: just open a fallback page
+      window.open(fallbackUrl, "_blank")
     }
   } catch (err) {
-    console.error("Failed to open CLANKTON in wallet", err)
-    window.open(clanktonUrl, "_blank")
+    console.error("viewToken failed, falling back to external URL", err)
+    window.open(fallbackUrl, "_blank")
   }
 }
 
