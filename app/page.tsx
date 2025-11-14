@@ -158,7 +158,7 @@ useEffect(() => {
   const effectivePrice = remotePrice ?? localPrice
   const progressPct = Math.min(100, (minted / MAX_SUPPLY) * 100)
 
- type DiscountAction =
+type DiscountAction =
   | "cast"
   | "tweet"
   | "follow_tpc"
@@ -170,6 +170,7 @@ const registerDiscountAction = async (
   action: DiscountAction,
 ) => {
   if (!addr) return
+
   try {
     await fetch("/api/register-discount-action", {
       method: "POST",
@@ -177,7 +178,7 @@ const registerDiscountAction = async (
       body: JSON.stringify({ address: addr, action }),
     })
   } catch (err) {
-    console.error("register-discount-action failed", err)
+    console.error("register-discount-action failed", { addr, action, err })
   }
 }
 
@@ -209,7 +210,7 @@ const handleOpenCastIntent = async () => {
   }
 }
 
-const handleOpenTweetIntent = () => {
+const handleOpenTweetIntent = async () => {
   const text =
     "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
   const url = encodeURIComponent("https://clankton-nft-edition.vercel.app")
@@ -222,7 +223,7 @@ const handleOpenTweetIntent = () => {
 
   setDiscounts((p) => ({ ...p, tweeted: true }))
   setStatusMessage("X opened – don’t forget to tweet!")
-  registerDiscountAction(userAddress, "tweet")
+  await registerDiscountAction(userAddress, "tweet")
 }
 
 const handleFollowTPC = () => {
@@ -243,7 +244,7 @@ const handleFollowTPC = () => {
 
   setDiscounts((p) => ({ ...p, followTPC: true }))
   setStatusMessage("Opened @thepapercrane – plz follow!")
-  registerDiscountAction(userAddress, "follow_tpc")
+  void registerDiscountAction(userAddress, "follow_tpc")
 }
 
 const handleFollowStar = () => {
@@ -264,7 +265,7 @@ const handleFollowStar = () => {
 
   setDiscounts((p) => ({ ...p, followStar: true }))
   setStatusMessage("Opened @starl3xx.eth – plz follow!")
-  registerDiscountAction(userAddress, "follow_star")
+  void registerDiscountAction(userAddress, "follow_star")
 }
 
 const handleFollowChannel = async () => {
@@ -279,7 +280,7 @@ const handleFollowChannel = async () => {
 
     setDiscounts((p) => ({ ...p, followChannel: true }))
     setStatusMessage("Opened /clankton – plz join!")
-    registerDiscountAction(userAddress, "follow_channel")
+    await registerDiscountAction(userAddress, "follow_channel")
   } catch (err) {
     console.error("open /clankton channel failed", err)
     setStatusMessage("Couldn’t open /clankton, try again")
