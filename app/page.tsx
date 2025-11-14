@@ -211,47 +211,47 @@ export default function ClanktonMintPage() {
     registerDiscountAction(userAddress)
   }
 
-  const handleFollowTPC = () => {
-    const profileUrl = "https://warpcast.com/thepapercrane"
+ const handleFollowTPC = () => {
+  const profileUrl = "https://warpcast.com/thepapercrane"
 
-    if (isMiniApp) {
-      ;(async () => {
-        try {
-          await sdk.actions.viewProfile({ username: "thepapercrane" })
-        } catch (err) {
-          console.error("viewProfile thepapercrane failed, falling back", err)
-          window.open(profileUrl, "_blank")
-        }
-      })()
-    } else {
-      window.open(profileUrl, "_blank")
-    }
-
-    setDiscounts((p) => ({ ...p, followTPC: true }))
-    setStatusMessage("Opened @thepapercrane – plz follow!")
-    registerDiscountAction(userAddress)
+  if (isMiniApp) {
+    ;(async () => {
+      try {
+        await sdk.actions.viewProfile({ fid: PAPERCRANE_FID })
+      } catch (err) {
+        console.error("viewProfile thepapercrane failed, falling back", err)
+        window.open(profileUrl, "_blank")
+      }
+    })()
+  } else {
+    window.open(profileUrl, "_blank")
   }
 
-  const handleFollowStar = () => {
-    const profileUrl = "https://warpcast.com/starl3xx.eth"
+  setDiscounts((p) => ({ ...p, followTPC: true }))
+  setStatusMessage("Opened @thepapercrane – plz follow!")
+  registerDiscountAction(address)
+}
 
-    if (isMiniApp) {
-      ;(async () => {
-        try {
-          await sdk.actions.viewProfile({ username: "starl3xx.eth" })
-        } catch (err) {
-          console.error("viewProfile starl3xx.eth failed, falling back", err)
-          window.open(profileUrl, "_blank")
-        }
-      })()
-    } else {
-      window.open(profileUrl, "_blank")
-    }
+const handleFollowStar = () => {
+  const profileUrl = "https://warpcast.com/starl3xx.eth"
 
-    setDiscounts((p) => ({ ...p, followStar: true }))
-    setStatusMessage("Opened @starl3xx.eth – plz follow!")
-    registerDiscountAction(userAddress)
+  if (isMiniApp) {
+    ;(async () => {
+      try {
+        await sdk.actions.viewProfile({ fid: STARL3XX_FID })
+      } catch (err) {
+        console.error("viewProfile starl3xx.eth failed, falling back", err)
+        window.open(profileUrl, "_blank")
+      }
+    })()
+  } else {
+    window.open(profileUrl, "_blank")
   }
+
+  setDiscounts((p) => ({ ...p, followStar: true }))
+  setStatusMessage("Opened @starl3xx.eth – plz follow!")
+  registerDiscountAction(address)
+}
 
   const handleFollowChannel = async () => {
     const url = "https://warpcast.com/~/channel/clankton"
