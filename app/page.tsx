@@ -38,6 +38,20 @@ type MintState = {
   seconds: number
 }
 
+const REACTION_LABELS = [
+  "Nice 😏",
+  "I see you 🥲",
+  "Aww, thanks!",
+  "Oh yeah!",
+  " 🐐 ",
+  "Go off!",
+  "Crushing",
+  "Easy, huh?",
+  "LFG!!",
+  " 🫡 ",
+  "Chad",
+]
+
 export default function ClanktonMintPage() {
   const [address, setAddress] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -284,9 +298,7 @@ export default function ClanktonMintPage() {
             <div className="text-right">
               <div className="text-2xl font-mono-price">
                 {formatClankton(effectivePrice)}{" "}
-                <span className="text-sm tracking-wide">
-                  CLANKTON
-                </span>
+                <span className="text-sm tracking-wide">CLANKTON</span>
               </div>
               <div className="text-[11px] text-white/70 mt-1">
                 Base price {formatClankton(BASE_PRICE)} − discounts{" "}
@@ -629,6 +641,12 @@ function ActionRow(props: {
   done?: boolean
   badge?: string
 }) {
+  const funLabel = useMemo(() => {
+    if (!props.done) return null
+    const index = Math.floor(Math.random() * REACTION_LABELS.length)
+    return REACTION_LABELS[index]
+  }, [props.done])
+
   return (
     <div className="relative rounded-3xl border border-white/20 bg-[#6E6099] p-3 flex items-center gap-3 shadow-[0_0_18px_rgba(255,255,255,0.14)]">
       {/* LEFT-SIDE BADGE */}
@@ -648,17 +666,18 @@ function ActionRow(props: {
       <div className="flex-1">
         <div className="flex items-center gap-2">
           <div className="text-sm font-medium">{props.title}</div>
-          {props.done && (
+          {props.done && funLabel && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#C9FF5B]/25 text-[#E8FFD0] border border-[#C9FF5B]/50">
-              action taken
+              {funLabel}
             </span>
           )}
         </div>
         <div className="text-xs text-white/80">{props.description}</div>
       </div>
       <button
-        className="text-[11px] whitespace-nowrap rounded-xl bg-white text-[#33264D] px-3 py-2 font-semibold hover:bg-[#C9FF5B] transition"
+        className="text-[11px] whitespace-nowrap rounded-xl bg-white text-[#33264D] px-3 py-2 font-semibold hover:bg-[#C9FF5B] transition disabled:opacity-60 disabled:cursor-not-allowed"
         onClick={props.onClick}
+        disabled={props.done}
       >
         {props.ctaLabel}
       </button>
