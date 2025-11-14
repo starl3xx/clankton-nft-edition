@@ -8,13 +8,17 @@ import {
 } from "react"
 import type React from "react"
 import Image from "next/image"
-import { sdk } from "@farcaster/miniapp-sdk"
+import { useAccount, useBalance } from "wagmi"
 
 const BASE_PRICE = 20_000_000
 const CAST_DISCOUNT = 2_000_000
 const TWEET_DISCOUNT = 1_000_000
 const FOLLOW_DISCOUNT = 500_000
 const MAX_SUPPLY = 50
+
+// CLANKTON ERC-20 on Base
+const CLANKTON_TOKEN_ADDRESS =
+  "0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07" as `0x${string}`
 
 // Dec 3, 2025 00:00 UTC
 const MINT_START = Math.floor(Date.UTC(2025, 11, 3, 0, 0, 0) / 1000)
@@ -54,7 +58,20 @@ const REACTION_LABELS = [
 ]
 
 export default function ClanktonMintPage() {
-  const [address, setAddress] = useState<string | null>(null)
+  // Wagmi: Farcaster wallet
+  const { address, isConnected } = useAccount()
+  const { data: clanktonBalanceData } = useBalance({
+    address,
+    token: CLANKTON_TOKEN_ADDRESS,
+    query: { enabled: !!address },
+  })
+
+  const userAddress = address ?? null
+  const clanktonBalance = clanktonBalanceData
+    ? Number(clanktonBalanceData.formatted)
+    : 0
+  const hasClankton = clanktonBalance > 0
+
   const [loading, setLoading] = useState(false)
   const [discounts, setDiscounts] = useState<DiscountFlags>({
     casted: false,
@@ -70,39 +87,12 @@ export default function ClanktonMintPage() {
   const [showHow, setShowHow] = useState(false)
   const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [lightboxOpen, setLightboxOpen] = useState(false)
-  const [isMiniApp, setIsMiniApp] = useState(false)
 
-// countdown
-useEffect(() => {
-  const id = setInterval(() => setMintState(computeMintState()), 1000)
-  return () => clearInterval(id)
-}, [])
-
-// Farcaster Mini App: tell shell we're ready + grab context
-useEffect(() => {
-  if (typeof window === "undefined") return
-
-  const run = async () => {
-    try {
-      // let Warpcast know the mini app has finished loading
-      await sdk.actions.ready()
-      console.log("Mini App ready() called successfully")
-
-      // fetch Mini App context (user fid, etc.)
-      try {
-        const ctx = await sdk.context
-        console.log("Farcaster Mini App context:", ctx)
-        setIsMiniApp(true)
-      } catch (err) {
-        console.warn("Could not fetch Farcaster context", err)
-      }
-    } catch (err) {
-      console.error("Farcaster mini app ready() failed", err)
-    }
-  }
-
-  void run()
-}, [])
+  // countdown
+  useEffect(() => {
+    const id = setInterval(() => setMintState(computeMintState()), 1000)
+    return () => clearInterval(id)
+  }, [])
 
   const isEnded = mintState.phase === "ended"
   const isNotStarted = mintState.phase === "before"
@@ -120,12 +110,6 @@ useEffect(() => {
   const localPrice = Math.max(BASE_PRICE - localDiscount, 0)
   const effectivePrice = remotePrice ?? localPrice
   const progressPct = Math.min(100, (minted / MAX_SUPPLY) * 100)
-
-  const handleConnectWallet = async () => {
-    const fakeAddress = "0x1234...abcd"
-    setAddress(fakeAddress)
-    setStatusMessage("Wallet connected (placeholder)")
-  }
 
   const registerDiscountAction = async (addr: string | null) => {
     if (!addr) return
@@ -150,7 +134,7 @@ useEffect(() => {
 
     setDiscounts((p) => ({ ...p, casted: true }))
     setStatusMessage("Farcaster opened – don’t forget to cast!")
-    registerDiscountAction(address)
+    registerDiscountAction(userAddress)
   }
 
   const handleOpenTweetIntent = () => {
@@ -166,39 +150,39 @@ useEffect(() => {
 
     setDiscounts((p) => ({ ...p, tweeted: true }))
     setStatusMessage("X opened – don’t forget to tweet!")
-    registerDiscountAction(address)
+    registerDiscountAction(userAddress)
   }
 
   const handleFollowTPC = () => {
     window.open("https://farcaster.xyz/thepapercrane", "_blank")
     setDiscounts((p) => ({ ...p, followTPC: true }))
     setStatusMessage("Opened @thepapercrane – plz follow!")
-    registerDiscountAction(address)
+    registerDiscountAction(userAddress)
   }
 
   const handleFollowStar = () => {
     window.open("https://farcaster.xyz/starl3xx.eth", "_blank")
     setDiscounts((p) => ({ ...p, followStar: true }))
     setStatusMessage("Opened @starl3xx.eth – plz follow!")
-    registerDiscountAction(address)
+    registerDiscountAction(userAddress)
   }
 
   const handleFollowChannel = () => {
     window.open("https://farcaster.xyz/~/channel/clankton", "_blank")
     setDiscounts((p) => ({ ...p, followChannel: true }))
     setStatusMessage("Opened /clankton – plz join!")
-    registerDiscountAction(address)
+    registerDiscountAction(userAddress)
   }
 
   const refreshDiscountsFromServer = async () => {
-    if (!address) {
-      setStatusMessage("Connect your wallet first")
+    if (!userAddress) {
+      setStatusMessage("Connect your Warpcast wallet first")
       return
     }
     setLoading(true)
     setStatusMessage(null)
     try {
-      const res = await fetch(`/api/user-discounts?address=${address}`)
+      const res = await fetch(`/api/user-discounts?address=${userAddress}`)
       if (!res.ok) throw new Error("Failed to fetch discounts")
       const data = await res.json()
       setDiscounts({
@@ -222,8 +206,8 @@ useEffect(() => {
   }
 
   const handleMint = async () => {
-    if (!address) {
-      await handleConnectWallet()
+    if (!userAddress || !isConnected) {
+      setStatusMessage("Connect your Warpcast wallet to mint")
       return
     }
     if (isEnded) {
@@ -242,7 +226,7 @@ useEffect(() => {
       const res = await fetch("/api/mint-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address }),
+        body: JSON.stringify({ address: userAddress }),
       })
       if (!res.ok) throw new Error("Failed to prepare mint")
       await res.json()
@@ -458,7 +442,11 @@ useEffect(() => {
             className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg-white/10 transition"
             onClick={handleBuyClankton}
           >
-            Buy CLANKTON
+            {hasClankton
+              ? `${formatBalance(
+                  clanktonBalance,
+                )} CLANKTON — buy more?`
+              : "Buy CLANKTON"}
           </button>
         </div>
 
@@ -483,8 +471,9 @@ useEffect(() => {
               </p>
               <p>
                 ✪ The mint in this mini app is only payable in CLANKTON{" "}
-                (<span className="font-mono text-[#FFB178]">
-                  0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07
+                (
+                <span className="font-mono text-[#FFB178]">
+                  {CLANKTON_TOKEN_ADDRESS}
                 </span>
                 ). Once you mint, your NFT is a standard ERC-721 token on Base
                 and can be traded on secondary marketplaces.
@@ -501,14 +490,15 @@ useEffect(() => {
         {/* Footer: wallet + status */}
         <div className="flex items-center justify-between text-[11px] text-white/80 pt-1">
           <div>
-            {address ? (
+            {userAddress ? (
               <>
-                Connected: <span className="font-mono">{address}</span>
+                Warpcast wallet:{" "}
+                <span className="font-mono">
+                  {shortAddress(userAddress)}
+                </span>
               </>
             ) : (
-              <button className="underline" onClick={handleConnectWallet}>
-                {isMiniApp ? "Connect Warpcast wallet" : "Connect wallet"}
-              </button>
+              <>Warpcast wallet: not connected</>
             )}
           </div>
           {statusMessage && (
@@ -519,8 +509,8 @@ useEffect(() => {
         </div>
 
         <div className="text-[10px] text-white/70 text-right pb-2">
-          Discounts applied once per wallet (hopefully) — this was vibe coded, so
-          who really knows? ¯\_(ツ)_/¯
+          Discounts applied once per wallet (hopefully) — this was vibe coded,
+          so who really knows? ¯\_(ツ)_/¯
         </div>
       </div>
 
@@ -603,8 +593,9 @@ function CountdownPill({
   if (mintState.phase === "before") {
     return (
       <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px] text-white">
-        Mint → {mintStartLabel}&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;{mintState.days}d{" "}
-        {mintState.hours}h {mintState.minutes}m {mintState.seconds}s
+        Mint → {mintStartLabel}&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+        {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
+        {mintState.seconds}s
       </span>
     )
   }
@@ -746,4 +737,15 @@ function Avatar({ src, alt }: { src: string; alt: string }) {
 function formatClankton(value: number | null | undefined) {
   if (value == null) return "–"
   return value.toLocaleString("en-US")
+}
+
+function shortAddress(addr: string) {
+  if (addr.length <= 10) return addr
+  return `${addr.slice(0, 4)}...${addr.slice(-4)}`
+}
+
+function formatBalance(v: number) {
+  if (!Number.isFinite(v)) return "0"
+  if (v >= 1000) return Math.round(v).toLocaleString("en-US")
+  return v.toFixed(2)
 }
