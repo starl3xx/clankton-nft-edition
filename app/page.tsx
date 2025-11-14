@@ -112,16 +112,16 @@ useEffect(() => {
     setStatusMessage("Wallet connected (placeholder)")
   }
 
-const registerDiscountAction = async (action: keyof DiscountFlags) => {
+const registerDiscountAction = async (_kind?: string) => {
   if (!address) return
   try {
     await fetch("/api/register-discount-action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address, action }),
+      body: JSON.stringify({ address, kind: _kind }),
     })
   } catch {
-    // ignore for now; UI already updated locally
+    // ignore
   }
 }
 
