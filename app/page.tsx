@@ -158,64 +158,74 @@ useEffect(() => {
   const effectivePrice = remotePrice ?? localPrice
   const progressPct = Math.min(100, (minted / MAX_SUPPLY) * 100)
 
-  const registerDiscountAction = async (addr: string | null | undefined) => {
-    if (!addr) return
+ type DiscountAction =
+  | "cast"
+  | "tweet"
+  | "follow_tpc"
+  | "follow_star"
+  | "follow_channel"
+
+const registerDiscountAction = async (
+  addr: string | null | undefined,
+  action: DiscountAction,
+) => {
+  if (!addr) return
+  try {
+    await fetch("/api/register-discount-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: addr, action }),
+    })
+  } catch (err) {
+    console.error("register-discount-action failed", err)
+  }
+}
+
+const handleOpenCastIntent = async () => {
+  const text =
+    "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
+  const url = "https://clankton-nft-edition.vercel.app"
+  const fullText = `${text} ${url}`
+  const encoded = encodeURIComponent(fullText)
+  const warpcastComposeUrl = `https://warpcast.com/~/compose?text=${encoded}`
+
+  try {
+    if (isMiniApp) {
+      await sdk.actions.composeCast({ text: fullText })
+    } else {
+      window.open(warpcastComposeUrl, "_blank", "noopener,noreferrer")
+    }
+
+    setDiscounts((p) => ({ ...p, casted: true }))
+    setStatusMessage("Farcaster opened – don’t forget to cast!")
+    await registerDiscountAction(userAddress, "cast")
+  } catch (err) {
+    console.error("composeCast/open cast failed", err)
     try {
-      await fetch("/api/register-discount-action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: addr }),
-      })
+      window.open(warpcastComposeUrl, "_blank", "noopener,noreferrer")
     } catch {
-      // ignore for now
+      // ignore
     }
   }
+}
 
-  const handleOpenCastIntent = async () => {
-    const text =
-      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
-    const url = "https://clankton-nft-edition.vercel.app"
-    const fullText = `${text} ${url}`
-    const encoded = encodeURIComponent(fullText)
-    const warpcastComposeUrl = `https://warpcast.com/~/compose?text=${encoded}`
+const handleOpenTweetIntent = () => {
+  const text =
+    "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
+  const url = encodeURIComponent("https://clankton-nft-edition.vercel.app")
+  const fullText = encodeURIComponent(`${text} ${decodeURIComponent(url)}`)
 
-    try {
-      if (isMiniApp) {
-        await sdk.actions.composeCast({ text: fullText })
-      } else {
-        window.open(warpcastComposeUrl, "_blank", "noopener,noreferrer")
-      }
+  window.open(
+    `https://twitter.com/intent/tweet?text=${fullText}`,
+    "_blank",
+  )
 
-      setDiscounts((p) => ({ ...p, casted: true }))
-      setStatusMessage("Farcaster opened – don’t forget to cast!")
-      await registerDiscountAction(userAddress)
-    } catch (err) {
-      console.error("composeCast/open cast failed", err)
-      try {
-        window.open(warpcastComposeUrl, "_blank", "noopener,noreferrer")
-      } catch {
-        // ignore
-      }
-    }
-  }
+  setDiscounts((p) => ({ ...p, tweeted: true }))
+  setStatusMessage("X opened – don’t forget to tweet!")
+  registerDiscountAction(userAddress, "tweet")
+}
 
-  const handleOpenTweetIntent = () => {
-    const text =
-      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
-    const url = encodeURIComponent("https://clankton-nft-edition.vercel.app")
-    const fullText = encodeURIComponent(`${text} ${decodeURIComponent(url)}`)
-
-    window.open(
-      `https://twitter.com/intent/tweet?text=${fullText}`,
-      "_blank",
-    )
-
-    setDiscounts((p) => ({ ...p, tweeted: true }))
-    setStatusMessage("X opened – don’t forget to tweet!")
-    registerDiscountAction(userAddress)
-  }
-
- const handleFollowTPC = () => {
+const handleFollowTPC = () => {
   const profileUrl = "https://warpcast.com/thepapercrane"
 
   if (isMiniApp) {
@@ -233,7 +243,7 @@ useEffect(() => {
 
   setDiscounts((p) => ({ ...p, followTPC: true }))
   setStatusMessage("Opened @thepapercrane – plz follow!")
-  registerDiscountAction(address)
+  registerDiscountAction(userAddress, "follow_tpc")
 }
 
 const handleFollowStar = () => {
@@ -254,54 +264,54 @@ const handleFollowStar = () => {
 
   setDiscounts((p) => ({ ...p, followStar: true }))
   setStatusMessage("Opened @starl3xx.eth – plz follow!")
-  registerDiscountAction(address)
+  registerDiscountAction(userAddress, "follow_star")
 }
 
-  const handleFollowChannel = async () => {
-    const url = "https://warpcast.com/~/channel/clankton"
+const handleFollowChannel = async () => {
+  const url = "https://warpcast.com/~/channel/clankton"
 
-    try {
-      if (isMiniApp) {
-        await sdk.actions.openUrl(url)
-      } else {
-        window.open(url, "_blank")
-      }
-
-      setDiscounts((p) => ({ ...p, followChannel: true }))
-      setStatusMessage("Opened /clankton – plz join!")
-      registerDiscountAction(userAddress)
-    } catch (err) {
-      console.error("open /clankton channel failed", err)
-      setStatusMessage("Couldn’t open /clankton, try again")
+  try {
+    if (isMiniApp) {
+      await sdk.actions.openUrl(url)
+    } else {
+      window.open(url, "_blank")
     }
+
+    setDiscounts((p) => ({ ...p, followChannel: true }))
+    setStatusMessage("Opened /clankton – plz join!")
+    registerDiscountAction(userAddress, "follow_channel")
+  } catch (err) {
+    console.error("open /clankton channel failed", err)
+    setStatusMessage("Couldn’t open /clankton, try again")
   }
+}
 
-  const refreshDiscountsFromServer = async () => {
-    if (!userAddress) {
-      setStatusMessage("Connect your Warpcast wallet first")
-      return
-    }
-    setLoading(true)
-    setStatusMessage(null)
-    try {
-      const res = await fetch(`/api/user-discounts?address=${userAddress}`)
-      if (!res.ok) throw new Error("Failed to fetch discounts")
-      const data = await res.json()
-      setDiscounts({
-        casted: data.casted ?? false,
-        tweeted: data.tweeted ?? false,
-        followTPC: data.followTPC ?? false,
-        followStar: data.followStar ?? false,
-        followChannel: data.followChannel ?? false,
-      })
-      setRemotePrice(Number(data.price))
-      setStatusMessage("Discounts refreshed from server")
-    } catch {
-      setStatusMessage("Could not refresh discounts")
-    } finally {
-      setLoading(false)
-    }
+const refreshDiscountsFromServer = async () => {
+  if (!userAddress) {
+    setStatusMessage("Connect your Warpcast wallet first")
+    return
   }
+  setLoading(true)
+  setStatusMessage(null)
+  try {
+    const res = await fetch(`/api/user-discounts?address=${userAddress}`)
+    if (!res.ok) throw new Error("Failed to fetch discounts")
+    const data = await res.json()
+    setDiscounts({
+      casted: data.casted ?? false,
+      tweeted: data.tweeted ?? false,
+      followTPC: data.followTPC ?? false,
+      followStar: data.followStar ?? false,
+      followChannel: data.followChannel ?? false,
+    })
+    setRemotePrice(Number(data.price))
+    setStatusMessage("Discounts refreshed from server")
+  } catch {
+    setStatusMessage("Could not refresh discounts")
+  } finally {
+    setLoading(false)
+  }
+}
 
   const handleBuyClankton = async () => {
     const fallbackUrl =
