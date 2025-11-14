@@ -396,7 +396,7 @@ export default function ClanktonMintPage() {
 
   const refreshDiscountsFromServer = async () => {
     if (!userAddress) {
-      setStatusMessage("Connect your Warpcast wallet first")
+      setStatusMessage("Connect your Farcaster wallet first")
       return
     }
     setLoading(true)
@@ -445,7 +445,7 @@ export default function ClanktonMintPage() {
 
   const handleMint = async () => {
     if (!userAddress || !isConnected) {
-      setStatusMessage("Connect your Warpcast wallet to mint")
+      setStatusMessage("Connect your Farcaster wallet to mint")
       return
     }
     if (isEnded) {
@@ -726,7 +726,7 @@ export default function ClanktonMintPage() {
           <div>
             {address ? (
               <>
-                Warpcast wallet:{" "}
+                Farcaster wallet:{" "}
                 <span className="font-mono">{shortAddress(address)}</span>
               </>
             ) : (
