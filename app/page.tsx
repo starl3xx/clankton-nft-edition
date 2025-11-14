@@ -8,6 +8,7 @@ import {
 } from "react"
 import type React from "react"
 import Image from "next/image"
+import { sdk } from "@farcaster/miniapp-sdk"
 
 const BASE_PRICE = 20_000_000
 const CAST_DISCOUNT = 2_000_000
@@ -69,11 +70,37 @@ export default function ClanktonMintPage() {
   const [showHow, setShowHow] = useState(false)
   const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [isMiniApp, setIsMiniApp] = useState(false)
 
   // countdown
   useEffect(() => {
     const id = setInterval(() => setMintState(computeMintState()), 1000)
     return () => clearInterval(id)
+  }, [])
+
+  // tell Farcaster mini app shell we're ready
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const run = async () => {
+      try {
+        await sdk.actions.ready()
+      } catch (err) {
+        console.error("Farcaster mini app ready() failed", err)
+      }
+    }
+
+    void run()
+  }, [])
+
+  // detect Warpcast mini app environment (simple UA sniff)
+  useEffect(() => {
+    if (typeof navigator === "undefined") return
+    const ua = navigator.userAgent.toLowerCase()
+    if (ua.includes("warpcast")) {
+      setIsMiniApp(true)
+      console.log("Detected Warpcast mini app environment")
+    }
   }, [])
 
   const isEnded = mintState.phase === "ended"
@@ -457,8 +484,8 @@ export default function ClanktonMintPage() {
                 ✪ The mint in this mini app is only payable in CLANKTON{" "}
                 (<span className="font-mono text-[#FFB178]">
                   0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07
-                </span>)
-                . Once you mint, your NFT is a standard ERC-721 token on Base
+                </span>
+                ). Once you mint, your NFT is a standard ERC-721 token on Base
                 and can be traded on secondary marketplaces.
               </p>
               <p>
@@ -479,7 +506,7 @@ export default function ClanktonMintPage() {
               </>
             ) : (
               <button className="underline" onClick={handleConnectWallet}>
-                Connect wallet
+                {isMiniApp ? "Connect Warpcast wallet" : "Connect wallet"}
               </button>
             )}
           </div>
@@ -491,7 +518,8 @@ export default function ClanktonMintPage() {
         </div>
 
         <div className="text-[10px] text-white/70 text-right pb-2">
-          Discounts applied once per wallet (hopefully) — this was vibe coded, so who really knows? ¯\_(ツ)_/¯
+          Discounts applied once per wallet (hopefully) — this was vibe coded, so
+          who really knows? ¯\_(ツ)_/¯
         </div>
       </div>
 
@@ -574,8 +602,8 @@ function CountdownPill({
   if (mintState.phase === "before") {
     return (
       <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px] text-white">
-        Mint → {mintStartLabel}&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;{mintState.days}d {mintState.hours}h{" "}
-        {mintState.minutes}m {mintState.seconds}s
+        Mint → {mintStartLabel}&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;{mintState.days}d{" "}
+        {mintState.hours}h {mintState.minutes}m {mintState.seconds}s
       </span>
     )
   }
