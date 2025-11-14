@@ -133,7 +133,7 @@ export default function ClanktonMintPage() {
 
   // Mini app boot: tell shell we're ready, then pull viewer context
   // Hydration-safe: only runs on client, guarded by typeof window
-  useEffect(() => {
+   useEffect(() => {
     if (typeof window === "undefined") return
 
     let cancelled = false
@@ -147,12 +147,13 @@ export default function ClanktonMintPage() {
         console.log("Mini app ready() OK")
 
         try {
-          const ctx = await sdk.context
+          // Cast to any so TS doesn't complain about `viewer`
+          const rawCtx: any = await sdk.context
           if (cancelled) return
 
           const fid =
-            ctx?.viewer && typeof ctx.viewer.fid === "number"
-              ? ctx.viewer.fid
+            rawCtx?.viewer && typeof rawCtx.viewer.fid === "number"
+              ? (rawCtx.viewer.fid as number)
               : null
 
           setViewerFid(fid)
