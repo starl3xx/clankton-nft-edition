@@ -301,21 +301,21 @@ const handleFollowChannel = async () => {
   }
 
 const handleBuyClankton = async () => {
+  // URL for CLANKTON token – adjust if you have a better deep link
+  const clanktonUrl =
+    "https://app.uniswap.org/swap?outputCurrency=0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07&chain=base"
+
   try {
     if (isMiniApp) {
-      await sdk.wallet.open({
-        type: "token",
-        chainId: "eip155:8453", // Base mainnet
-        tokenAddress: "0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07"
-      })
-      return
+      // Ask the Warpcast wallet to open this URL in-app
+      await sdk.wallet.openUrl({ url: clanktonUrl })
+    } else {
+      // Regular browser fallback
+      window.open(clanktonUrl, "_blank")
     }
-
-    // Fallback for normal browsers
-    window.open("https://warpcast.com/~/wallet", "_blank")
   } catch (err) {
-    console.error("wallet.open() failed:", err)
-    setStatusMessage("Couldn’t open wallet — try again")
+    console.error("Failed to open CLANKTON in wallet", err)
+    window.open(clanktonUrl, "_blank")
   }
 }
 
