@@ -169,16 +169,31 @@ const registerDiscountAction = async (
   addr: string | null | undefined,
   action: DiscountAction,
 ) => {
-  if (!addr) return
+  if (!addr) {
+    console.warn("registerDiscountAction: missing address, skipping", { action })
+    return
+  }
 
   try {
-    await fetch("/api/register-discount-action", {
+    const res = await fetch("/api/register-discount-action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ address: addr, action }),
     })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "")
+      console.error("register-discount-action: non-OK response", {
+        status: res.status,
+        body: text,
+      })
+      return
+    }
+
+    const json = await res.json().catch(() => null)
+    console.log("register-discount-action: success", { addr, action, json })
   } catch (err) {
-    console.error("register-discount-action failed", { addr, action, err })
+    console.error("register-discount-action: fetch failed", { addr, action, err })
   }
 }
 
