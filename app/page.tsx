@@ -78,38 +78,30 @@ useEffect(() => {
   return () => clearInterval(id)
 }, [])
 
-// Farcaster Mini App: load SDK + call ready()
+// Farcaster Mini App: tell shell we're ready + grab context
 useEffect(() => {
-  let cancelled = false
+  if (typeof window === "undefined") return
 
-  async function init() {
-    if (typeof window === "undefined") return
-
+  const run = async () => {
     try {
-      // Dynamically import so it never runs server-side
-      const { sdk } = await import("@farcaster/miniapp-sdk")
-
+      // let Warpcast know the mini app has finished loading
       await sdk.actions.ready()
+      console.log("Mini App ready() called successfully")
 
-      if (!cancelled) {
-        console.log("Mini App ready() called successfully")
-
-        const ctx = await sdk.context.getContext()
+      // fetch Mini App context (user fid, etc.)
+      try {
+        const ctx = await sdk.context
         console.log("Farcaster Mini App context:", ctx)
-
         setIsMiniApp(true)
+      } catch (err) {
+        console.warn("Could not fetch Farcaster context", err)
       }
     } catch (err) {
-      // Not running inside Warpcast OR SDK not available yet
-      console.debug("Not in Mini App environment:", err)
+      console.error("Farcaster mini app ready() failed", err)
     }
   }
 
-  void init()
-
-  return () => {
-    cancelled = true
-  }
+  void run()
 }, [])
 
   const isEnded = mintState.phase === "ended"
