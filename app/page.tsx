@@ -27,7 +27,7 @@ const CLANKTON_CAIP19 =
 const PAPERCRANE_FID = 249958 as number
 const STARL3XX_FID = 6500 as number
 
-// Dec 3, 2025 00:00 UTC
+// MINT START date in UTC
 const MINT_START = Math.floor(Date.UTC(2025, 11, 3, 0, 0, 0) / 1000)
 const MINT_END = MINT_START + 7 * 24 * 60 * 60
 
@@ -48,6 +48,28 @@ type MintState = {
   hours: number
   minutes: number
   seconds: number
+}
+
+// Shape we expect from /api/farcaster/follows?fid=X
+// That API should talk to Neynar server-side and answer:
+//
+//   {
+//     "followTPC": boolean,      // viewer follows PAPERCRANE_FID
+//     "followStar": boolean,     // viewer follows STARL3XX_FID
+//     "followChannel": boolean   // viewer has joined /clankton
+//   }
+//
+// Example (server-side) Neynar code – belongs in route.ts, NOT here:
+//
+//   const res = await fetch(
+//     `https://api.neynar.com/v2/farcaster/user/follows?fid=${viewerFid}`,
+//     { headers: { "api_key": process.env.NEYNAR_API_KEY! } }
+//   )
+//
+type FollowsResponse = {
+  followTPC: boolean
+  followStar: boolean
+  followChannel: boolean
 }
 
 const REACTION_LABELS = [
@@ -80,13 +102,8 @@ export default function ClanktonMintPage() {
     ? Number(clanktonBalanceData.formatted)
     : 0
 
-  // Abbreviated format
   const abbrevBalance = formatAbbrev(clanktonBalance)
-
-  // Single unified flag
   const hasClankton = clanktonBalance > 0
-
-  // Button label
   const buyClanktonLabel = hasClankton
     ? `${abbrevBalance} CLANKTON — buy more?`
     : "Buy CLANKTON"
@@ -115,30 +132,53 @@ export default function ClanktonMintPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [isMiniApp, setIsMiniApp] = useState(false)
 
+  // Farcaster viewer fid (only available inside mini app)
+  const [viewerFid, setViewerFid] = useState<number | null>(null)
+
+  // Have we already auto-applied follow discounts from Neynar/API?
+  const [bootstrappedFollows, setBootstrappedFollows] = useState(false)
+
   // countdown
   useEffect(() => {
     const id = setInterval(() => setMintState(computeMintState()), 1000)
     return () => clearInterval(id)
   }, [])
 
-  // tell Farcaster mini app shell we're ready and mark as mini app if it succeeds
+  // Mini app boot: tell shell we're ready, then pull viewer context
+  // Hydration-safe: only runs on client, guarded by typeof window
   useEffect(() => {
     if (typeof window === "undefined") return
 
-    const run = async () => {
+    const init = async () => {
       try {
         await sdk.actions.ready()
-        console.log("Mini App ready() called successfully")
-
-        // If ready() resolves, we know we're running as a mini app (including dev preview)
         setIsMiniApp(true)
+        console.log("Mini app ready() OK")
+
+        let ctx: any = null
+        try {
+          ctx = await sdk.context
+        } catch (e) {
+          console.warn("sdk.context unavailable (dev preview or not in mini app)", e)
+          setViewerFid(null)
+          return
+        }
+
+        const fid =
+          ctx?.viewer && typeof ctx.viewer.fid === "number"
+            ? ctx.viewer.fid
+            : null
+
+        setViewerFid(fid)
+        console.log("Mini-app viewer FID:", fid)
       } catch (err) {
-        console.error("Farcaster mini app ready() failed", err)
+        console.error("Mini app boot failed", err)
         setIsMiniApp(false)
+        setViewerFid(null)
       }
     }
 
-    void run()
+    void init()
   }, [])
 
   const isEnded = mintState.phase === "ended"
@@ -157,6 +197,8 @@ export default function ClanktonMintPage() {
   const localPrice = Math.max(BASE_PRICE - localDiscount, 0)
   const effectivePrice = remotePrice ?? localPrice
   const progressPct = Math.min(100, (minted / MAX_SUPPLY) * 100)
+
+  // ---- DISCOUNT SECTION ----------------------------------------------------
 
   type DiscountAction =
     | "cast"
@@ -194,6 +236,57 @@ export default function ClanktonMintPage() {
       console.error("register-discount-action failed", err)
     }
   }
+
+  // Auto-apply follow discounts once we know viewer fid (mini app only)
+  // and can fetch from /api/farcaster/follows?fid=X (which talks to Neynar)
+  useEffect(() => {
+    if (!isMiniApp) return
+    if (!viewerFid) return
+    if (bootstrappedFollows) return
+
+    const run = async () => {
+      try {
+        const res = await fetch(`/api/farcaster/follows?fid=${viewerFid}`)
+        if (!res.ok) throw new Error("Failed to fetch follow data")
+        const data = (await res.json()) as FollowsResponse
+
+        const { followTPC, followStar, followChannel } = data
+
+        if (!followTPC && !followStar && !followChannel) {
+          setBootstrappedFollows(true)
+          return
+        }
+
+        // Update local discount flags
+        setDiscounts((prev) => ({
+          ...prev,
+          followTPC: prev.followTPC || !!followTPC,
+          followStar: prev.followStar || !!followStar,
+          followChannel: prev.followChannel || !!followChannel,
+        }))
+
+        // Optionally mirror these into the DB if we already know the wallet
+        if (userAddress) {
+          const actions: DiscountAction[] = []
+          if (followTPC) actions.push("follow_tpc")
+          if (followStar) actions.push("follow_star")
+          if (followChannel) actions.push("follow_channel")
+
+          await Promise.all(
+            actions.map((a) => registerDiscountAction(userAddress, a)),
+          )
+        }
+
+        setStatusMessage("Follow discounts auto-applied from Farcaster")
+      } catch (err) {
+        console.error("Failed to bootstrap follow discounts from Neynar/API", err)
+      } finally {
+        setBootstrappedFollows(true)
+      }
+    }
+
+    void run()
+  }, [isMiniApp, viewerFid, bootstrappedFollows, userAddress])
 
   const handleOpenCastIntent = async () => {
     const text =
@@ -385,17 +478,17 @@ export default function ClanktonMintPage() {
     }
   }
 
-const handleArtMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-  const rect = e.currentTarget.getBoundingClientRect()
-  const relX = (e.clientX - rect.left) / rect.width - 0.5
-  const relY = (e.clientY - rect.top) / rect.height - 0.5
-  const maxTilt = 6
+  const handleArtMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const relX = (e.clientX - rect.left) / rect.width - 0.5
+    const relY = (e.clientY - rect.top) / rect.height - 0.5
+    const maxTilt = 6
 
-  setArtTilt({
-    x: -relX * maxTilt,
-    y: relY * maxTilt,
-  })
-}
+    setArtTilt({
+      x: -relX * maxTilt,
+      y: relY * maxTilt,
+    })
+  }
 
   const handleArtMouseLeave = () => {
     setArtTilt({ x: 0, y: 0 })
@@ -583,7 +676,7 @@ const handleArtMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
           </button>
 
           <button
-            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg-white/10 transition"
+            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg:white/10 transition"
             onClick={handleBuyClankton}
           >
             {buyClanktonLabel}
@@ -628,7 +721,7 @@ const handleArtMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         </div>
 
         {/* Footer: wallet + status */}
-        <div className="flex items-center justify-between text-xs text-white/80 pt-1">
+        <div className="flex items-center justify-between text-xs text:white/80 pt-1">
           <div>
             {address ? (
               <>
@@ -739,7 +832,7 @@ function CountdownPill({
   }
 
   return (
-    <span className="px-2 py-1 rounded-full bg:white/15 border border-white/35 text-xs text-white">
+    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text-white">
       Mint ends in {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
       {mintState.seconds}s
     </span>
