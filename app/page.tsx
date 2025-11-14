@@ -130,18 +130,18 @@ useEffect(() => {
   const effectivePrice = remotePrice ?? localPrice
   const progressPct = Math.min(100, (minted / MAX_SUPPLY) * 100)
 
-  const registerDiscountAction = async (addr: string | null) => {
-    if (!addr) return
-    try {
-      await fetch("/api/register-discount-action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: addr }),
-      })
-    } catch {
-      // ignore for now
-    }
+const registerDiscountAction = async (addr: string | null | undefined) => {
+  if (!addr) return  // handles null + undefined + ""
+  try {
+    await fetch("/api/register-discount-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: addr }),
+    })
+  } catch {
+    // ignore for now
   }
+}
 
 const handleOpenCastIntent = async () => {
   const text =
