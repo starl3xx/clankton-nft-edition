@@ -145,10 +145,19 @@ export default function ClanktonMintPage() {
           const rawCtx: any = await sdk.context
           if (cancelled) return
 
-          const fid =
-            rawCtx?.viewer && typeof rawCtx.viewer.fid === "number"
-              ? (rawCtx.viewer.fid as number)
-              : null
+          console.log("[init] raw miniapp context:", rawCtx)
+
+          let fid: number | null = null
+
+          if (typeof rawCtx?.viewer?.fid === "number") {
+            fid = rawCtx.viewer.fid
+          } else if (typeof rawCtx?.user?.fid === "number") {
+            // some hosts expose `user` instead of `viewer`
+            fid = rawCtx.user.fid
+          } else if (typeof rawCtx?.cast?.author?.fid === "number") {
+            // sometimes only the cast author is present
+            fid = rawCtx.cast.author.fid
+          }
 
           setViewerFid(fid)
           console.log("[init] Mini-app viewer FID:", fid)
