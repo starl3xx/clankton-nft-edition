@@ -69,12 +69,12 @@ body {
 /* MOBILE FONT SCALE-UP */
 @media (max-width: 480px) {
   html {
-    font-size: 18px; /* default is 16px → +12.5% */
+    font-size: 17px; /* default is 16px → +12.5% */
   }
 }
 
 @media (max-width: 380px) {
   html {
-    font-size: 19px; /* slightly larger on very small screens */
+    font-size: 18px; /* slightly larger on very small screens */
   }
 }
