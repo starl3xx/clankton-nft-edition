@@ -72,36 +72,45 @@ export default function ClanktonMintPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [isMiniApp, setIsMiniApp] = useState(false)
 
-  // countdown
-  useEffect(() => {
-    const id = setInterval(() => setMintState(computeMintState()), 1000)
-    return () => clearInterval(id)
-  }, [])
+// countdown
+useEffect(() => {
+  const id = setInterval(() => setMintState(computeMintState()), 1000)
+  return () => clearInterval(id)
+}, [])
 
-  // tell Farcaster mini app shell we're ready
-  useEffect(() => {
+// Farcaster Mini App: load SDK + call ready()
+useEffect(() => {
+  let cancelled = false
+
+  async function init() {
     if (typeof window === "undefined") return
 
-    const run = async () => {
-      try {
-        await sdk.actions.ready()
-      } catch (err) {
-        console.error("Farcaster mini app ready() failed", err)
+    try {
+      // Dynamically import so it never runs server-side
+      const { sdk } = await import("@farcaster/miniapp-sdk")
+
+      await sdk.actions.ready()
+
+      if (!cancelled) {
+        console.log("Mini App ready() called successfully")
+
+        const ctx = await sdk.context.getContext()
+        console.log("Farcaster Mini App context:", ctx)
+
+        setIsMiniApp(true)
       }
+    } catch (err) {
+      // Not running inside Warpcast OR SDK not available yet
+      console.debug("Not in Mini App environment:", err)
     }
+  }
 
-    void run()
-  }, [])
+  void init()
 
-  // detect Warpcast mini app environment (simple UA sniff)
-  useEffect(() => {
-    if (typeof navigator === "undefined") return
-    const ua = navigator.userAgent.toLowerCase()
-    if (ua.includes("warpcast")) {
-      setIsMiniApp(true)
-      console.log("Detected Warpcast mini app environment")
-    }
-  }, [])
+  return () => {
+    cancelled = true
+  }
+}, [])
 
   const isEnded = mintState.phase === "ended"
   const isNotStarted = mintState.phase === "before"
