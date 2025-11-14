@@ -43,12 +43,12 @@ const REACTION_LABELS = [
   "I see you 🥲",
   "Aww, thanks!",
   "Oh yeah!",
-  " 🐐 ",
+  "🐐",
   "Go off!",
   "Crushing",
   "Easy, huh?",
   "LFG!!",
-  " 🫡 ",
+  "🫡",
   "Chad",
 ]
 
@@ -64,30 +64,17 @@ export default function ClanktonMintPage() {
   })
   const [remotePrice, setRemotePrice] = useState<number | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
-const [mintState, setMintState] = useState<MintState>({
-  phase: "before",
-  total: 0,
-  days: 0,
-  hours: 0,
-  minutes: 0,
-  seconds: 0,
-})
+  const [mintState, setMintState] = useState<MintState>(() => computeMintState())
   const [minted] = useState(0)
   const [showHow, setShowHow] = useState(false)
   const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
-// countdown – run only on client
-useEffect(() => {
-  // set immediately on mount so the first client paint is correct
-  setMintState(computeMintState())
-
-  const id = setInterval(() => {
-    setMintState(computeMintState())
-  }, 1000)
-
-  return () => clearInterval(id)
-}, [])
+  // countdown
+  useEffect(() => {
+    const id = setInterval(() => setMintState(computeMintState()), 1000)
+    return () => clearInterval(id)
+  }, [])
 
   const isEnded = mintState.phase === "ended"
   const isNotStarted = mintState.phase === "before"
@@ -112,80 +99,68 @@ useEffect(() => {
     setStatusMessage("Wallet connected (placeholder)")
   }
 
-const registerDiscountAction = async (
-  action:
-    | "cast"
-    | "tweet"
-    | "follow_tpc"
-    | "follow_star"
-    | "follow_channel",
-) => {
-  if (!address) return;
-  try {
-    await fetch("/api/register-discount-action", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address, action }),
-    });
-  } catch {
-    // ignore – UI already optimistic
+  const registerDiscountAction = async (addr: string | null) => {
+    if (!addr) return
+    try {
+      await fetch("/api/register-discount-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: addr }),
+      })
+    } catch {
+      // ignore for now
+    }
   }
-};
 
-const handleOpenCastIntent = () => {
-  const message =
-    "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
-  const url = "https://clankton-nft-edition.vercel.app"
+  const handleOpenCastIntent = () => {
+    const text =
+      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
+    const url = encodeURIComponent("https://clankton-nft-edition.vercel.app")
+    const fullText = encodeURIComponent(`${text} ${decodeURIComponent(url)}`)
 
-  const fullText = encodeURIComponent(`${message} ${url}`)
+    window.open(`https://warpcast.com/~/compose?text=${fullText}`, "_blank")
 
-  window.open(
-    `https://warpcast.com/~/compose?text=${fullText}`,
-    "_blank",
-  )
+    setDiscounts((p) => ({ ...p, casted: true }))
+    setStatusMessage("Farcaster opened – don’t forget to cast!")
+    registerDiscountAction(address)
+  }
 
-  setDiscounts((p) => ({ ...p, casted: true }))
-  setStatusMessage("Farcaster opened – don’t forget to cast!")
-  registerDiscountAction("cast")
-}
+  const handleOpenTweetIntent = () => {
+    const text =
+      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
+    const url = encodeURIComponent("https://clankton-nft-edition.vercel.app")
+    const fullText = encodeURIComponent(`${text} ${decodeURIComponent(url)}`)
 
-const handleOpenTweetIntent = () => {
-  const message =
-    "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
-  const url = "https://clankton-nft-edition.vercel.app"
+    window.open(
+      `https://twitter.com/intent/tweet?text=${fullText}`,
+      "_blank",
+    )
 
-  const fullText = encodeURIComponent(`${message} ${url}`)
+    setDiscounts((p) => ({ ...p, tweeted: true }))
+    setStatusMessage("X opened – don’t forget to tweet!")
+    registerDiscountAction(address)
+  }
 
-  window.open(
-    `https://twitter.com/intent/tweet?text=${fullText}`,
-    "_blank",
-  )
+  const handleFollowTPC = () => {
+    window.open("https://farcaster.xyz/thepapercrane", "_blank")
+    setDiscounts((p) => ({ ...p, followTPC: true }))
+    setStatusMessage("Opened @thepapercrane – plz follow!")
+    registerDiscountAction(address)
+  }
 
-  setDiscounts((p) => ({ ...p, tweeted: true }))
-  setStatusMessage("𝕏 opened – don’t forget to tweet!")
-  registerDiscountAction("tweet")
-}
+  const handleFollowStar = () => {
+    window.open("https://farcaster.xyz/starl3xx.eth", "_blank")
+    setDiscounts((p) => ({ ...p, followStar: true }))
+    setStatusMessage("Opened @starl3xx.eth – plz follow!")
+    registerDiscountAction(address)
+  }
 
-const handleFollowTPC = () => {
-  window.open("https://farcaster.xyz/thepapercrane", "_blank")
-  setDiscounts((p) => ({ ...p, followTPC: true }))
-  setStatusMessage("Opened @thepapercrane – plz follow!")
-  registerDiscountAction("follow_tpc")
-}
-
-const handleFollowStar = () => {
-  window.open("https://farcaster.xyz/starl3xx.eth", "_blank")
-  setDiscounts((p) => ({ ...p, followStar: true }))
-  setStatusMessage("Opened @starl3xx.eth – plz follow!")
-  registerDiscountAction("follow_star")
-}
-
-const handleFollowChannel = () => {
-  window.open("https://farcaster.xyz/~/channel/clankton", "_blank")
-  setDiscounts((p) => ({ ...p, followChannel: true }))
-  setStatusMessage("Opened /clankton – plz follow!")
-  registerDiscountAction("follow_channel")
-}
+  const handleFollowChannel = () => {
+    window.open("https://farcaster.xyz/~/channel/clankton", "_blank")
+    setDiscounts((p) => ({ ...p, followChannel: true }))
+    setStatusMessage("Opened /clankton – plz join!")
+    registerDiscountAction(address)
+  }
 
   const refreshDiscountsFromServer = async () => {
     if (!address) {
@@ -302,8 +277,8 @@ const handleFollowChannel = () => {
           {/* Right: edition + countdown + progress */}
           <div className="flex-1 flex flex-col justify-between h-32">
             <div className="space-y-2">
-              <div className="text-xs md:text-sm uppercase tracking-wide text-white/75">
-                Edition of 50 • Base
+              <div className="text-[11px] uppercase tracking-wide text-white/75">
+                Edition of 50&nbsp;&nbsp;✪&nbsp;&nbsp;ERC-721 on Base
               </div>
               <CountdownPill mintState={mintState} mintStartLabel="Dec 3" />
             </div>
@@ -319,13 +294,13 @@ const handleFollowChannel = () => {
         {/* Price card */}
         <div className="rounded-3xl bg-[#6E6099] border border-white/10 p-4 space-y-3 shadow-[0_0_22px_rgba(255,255,255,0.18)]">
           <div className="flex items-start justify-between">
-            <div className="text-sm md:text-base text-white/80">Your price</div>
+            <div className="text-sm text-white/80">Your price</div>
             <div className="text-right">
-              <div className="text-2xl md:text-3xl font-mono-price">
+              <div className="text-2xl font-mono-price">
                 {formatClankton(effectivePrice)}{" "}
-                <span className="text-sm md:text-base tracking-wide">CLANKTON</span>
+                <span className="text-sm tracking-wide">CLANKTON</span>
               </div>
-              <div className="text-xs md:text-sm text-white/70 mt-1">
+              <div className="text-[11px] text-white/70 mt-1">
                 Base price {formatClankton(BASE_PRICE)} − discounts{" "}
                 {formatClankton(localDiscount)}
               </div>
@@ -333,7 +308,7 @@ const handleFollowChannel = () => {
           </div>
 
           <div className="mt-3">
-            <div className="flex flex-wrap gap-2 text-xs md:text-sm">
+            <div className="flex flex-wrap gap-2 text-[11px]">
               <DiscountPill
                 label="Cast"
                 value="-2,000,000"
@@ -364,8 +339,8 @@ const handleFollowChannel = () => {
         </div>
 
         {/* Discounts header */}
-        <div className="text-sm md:text-base text-white/90 tracking-wide text-center uppercase mt-1 mb-1 font-bold">
-          ✨ Super easy mint discounts ✨
+        <div className="text-m text-white/90 tracking-wide text-center uppercase mt-1 mb-1 font-bold">
+          ✨ Super simple mint discounts ✨
         </div>
 
         {/* Actions */}
@@ -387,7 +362,7 @@ const handleFollowChannel = () => {
               </div>
             }
             title="Tweet about this mint"
-            description="Post on X and earn a 1,000,000 CLANKTON discount"
+            description="Post on 𝕏 and earn a 1,000,000 CLANKTON discount"
             ctaLabel="Tweet"
             badge="1M OFF!"
             onClick={handleOpenTweetIntent}
@@ -407,7 +382,7 @@ const handleFollowChannel = () => {
           <ActionRow
             icon={<Avatar src="/starl3xx.png" alt="@starl3xx.eth avatar" />}
             title="Follow @starl3xx.eth"
-            description="Follow the CLANKTON clanker for a 500,000 CLANKTON discount"
+            description="Follow the CLANKTON Clanker for a 500,000 CLANKTON discount"
             ctaLabel="Follow"
             badge="500K OFF!"
             onClick={handleFollowStar}
@@ -418,7 +393,7 @@ const handleFollowChannel = () => {
             icon={
               <Avatar src="/clankton-purple.png" alt="CLANKTON channel icon" />
             }
-            title="Follow /clankton channel"
+            title="Follow the /clankton channel"
             description="Join the CLANKTON channel for a 500,000 CLANKTON discount"
             ctaLabel="Follow"
             badge="500K OFF!"
@@ -427,18 +402,18 @@ const handleFollowChannel = () => {
           />
 
           <button
-            className="w-full text-sm md:text-base rounded-xl border border-white/30 bg-transparent px-3 py-2 hover:bg-white/5 transition disabled:opacity-60"
+            className="w-full text-xs rounded-xl border border-white/30 bg-transparent px-3 py-2 hover:bg-white/5 transition disabled:opacity-60"
             onClick={refreshDiscountsFromServer}
             disabled={loading}
           >
-            {loading ? "Refreshing…" : "Refresh my discounts (verifies on server)"}
+            {loading ? "Refreshing…" : "🔄 Refresh my discounts! (verifies on server)"}
           </button>
         </div>
 
         {/* Mint + Buy buttons */}
         <div className="space-y-2">
           <button
-            className="w-full rounded-2xl bg-[#C9FF5B] text-black font-semibold px-4 py-3 text-center text-sm md:text-base shadow-[0_0_30px_rgba(201,255,91,0.6)] hover:bg-[#D7FF86] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-2xl bg-[#C9FF5B] text-black font-semibold px-4 py-3 text-center text-sm shadow-[0_0_30px_rgba(201,255,91,0.6)] hover:bg-[#D7FF86] transition disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading || isEnded || isNotStarted}
             onClick={handleMint}
           >
@@ -452,7 +427,7 @@ const handleFollowChannel = () => {
           </button>
 
           <button
-            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm md:text-base px-4 py-3 text-center hover:bg-white/10 transition"
+            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg-white/10 transition"
             onClick={handleBuyClankton}
           >
             Buy CLANKTON
@@ -462,41 +437,41 @@ const handleFollowChannel = () => {
         {/* FAQ */}
         <div className="rounded-2xl border border-white/20 bg-[#6E6099] shadow-[0_0_18px_rgba(255,255,255,0.14)]">
           <button
-            className="w-full px-4 py-3 flex items-center justify-between text-sm md:text-base text-white/85"
+            className="w-full px-4 py-3 flex items-center justify-between text-xs text-white/85 font-semibold"
             onClick={() => setShowHow((v) => !v)}
           >
-            <span>Frequently Asked Questions</span>
+            <span>(Answers to) Frequently Asked Questions</span>
             <span className="text-white/70">{showHow ? "−" : "+"}</span>
           </button>
           {showHow && (
-            <div className="px-4 pb-3 text-sm md:text-base text-white/80 space-y-2">
+            <div className="px-4 pb-3 text-[11px] text-white/80 space-y-2">
               <p>
-                ✦ When the mint goes live, anyone can mint an NFT until all 50
+                ✪ When the mint goes live, anyone can mint an NFT until all 50
                 editions are sold out. There is no whitelist or allowlist.
               </p>
               <p>
-                ✦ Discount actions only make your mint cheaper – they do not
+                ✪ Discount actions only make your mint cheaper – they do not
                 give you priority or guarantee a spot.
               </p>
-             <p>
-  ✦ The mint in this mini app is only payable in CLANKTON (
-  <span className="font-mono text-[0.85em] text-[#F6A749]">
-    0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07
-  </span>
-  ). Once you mint, your NFT is a standard ERC-721 token on Base and can
-  be traded on secondary marketplaces.
-</p>
               <p>
-                ✦ If you perform any of the discount actions and have
-                notifications enabled, we’ll send you a Farcaster notification
-                when the mint is live.
+                ✪ The mint in this mini app is only payable in CLANKTON{" "}
+                (<span className="font-mono text-[#FFB178]">
+                  0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07
+                </span>)
+                . Once you mint, your NFT is a standard ERC-721 token on Base
+                and can be traded on secondary marketplaces.
+              </p>
+              <p>
+                ✪ If you perform any of the discount actions and have
+                notifications enabled, you’ll receive a Farcaster notification
+                when the mint is live. Unless something breaks.
               </p>
             </div>
           )}
         </div>
 
         {/* Footer: wallet + status */}
-        <div className="flex items-center justify-between text-sm md:text-base text-white/80 pt-1">
+        <div className="flex items-center justify-between text-[11px] text-white/80 pt-1">
           <div>
             {address ? (
               <>
@@ -509,12 +484,14 @@ const handleFollowChannel = () => {
             )}
           </div>
           {statusMessage && (
-            <div className="text-right max-w-[55%]">{statusMessage}</div>
+            <div className="text-right max-w-[55%] font-medium text-[#FFB178] drop-shadow-[0_0_6px_rgba(255,177,120,0.45)]">
+              {statusMessage}
+            </div>
           )}
         </div>
 
-        <div className="text-xs md:text-sm text-white/70 text-right pb-2">
-          Discounts applied once per wallet. Payment in CLANKTON on Base.
+        <div className="text-[10px] text-white/70 text-right pb-2">
+          Discounts applied once per wallet (hopefully) — this was vibe coded, so who really knows? ¯\_(ツ)_/¯
         </div>
       </div>
 
@@ -529,7 +506,7 @@ const handleFollowChannel = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              className="absolute -top-8 right-0 text-sm text-white/80 hover:text-white"
+              className="absolute -top-8 right-0 text-xs text-white/80 hover:text-white"
               onClick={() => setLightboxOpen(false)}
             >
               close ✕
@@ -550,6 +527,8 @@ const handleFollowChannel = () => {
     </div>
   )
 }
+
+/* ----- helpers ---------------------------------------------------------- */
 
 function computeMintState(): MintState {
   const now = Math.floor(Date.now() / 1000)
@@ -586,7 +565,7 @@ function CountdownPill({
 }) {
   if (mintState.phase === "ended") {
     return (
-      <span className="px-2 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-500/40 text-xs md:text-sm">
+      <span className="px-2 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-500/40 text-[11px]">
         Mint ended
       </span>
     )
@@ -594,15 +573,15 @@ function CountdownPill({
 
   if (mintState.phase === "before") {
     return (
-      <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs md:text-sm text-white">
-        Mint begins {mintStartLabel} • {mintState.days}d {mintState.hours}h{" "}
+      <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px] text-white">
+        Mint → {mintStartLabel}&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;{mintState.days}d {mintState.hours}h{" "}
         {mintState.minutes}m {mintState.seconds}s
       </span>
     )
   }
 
   return (
-    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs md:text-sm text-white">
+    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px] text-white">
       Mint ends in {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
       {mintState.seconds}s
     </span>
@@ -620,13 +599,13 @@ function EditionProgress({
 }) {
   return (
     <div className="mt-2 space-y-1">
-      <div className="flex items-center justify-between text-xs md:text-sm text-white/85">
+      <div className="flex items-center justify-between text-[11px] text-white/85">
         <span>
           {minted} / {maxSupply} minted
         </span>
         <span>{Math.round(pct)}%</span>
       </div>
-      <div className="h-1.5 rounded-full bg-white/20 bg-white/20 overflow-hidden">
+      <div className="h-1.5 rounded-full bg-white/20 overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-[#C9FF5B] to-[#F7FFB2]"
           style={{ width: `${pct}%` }}
@@ -647,7 +626,7 @@ function DiscountPill({
 }) {
   return (
     <div
-      className={`px-2 py-1 rounded-full border text-xs md:text-sm flex items-center gap-1 ${
+      className={`px-2 py-1 rounded-full border text-[11px] flex items-center gap-1 ${
         active
           ? "border-[#C9FF5B] bg-[#C9FF5B]/15 text-[#E8FFD0]"
           : "border-white/30 text-white/70"
@@ -655,7 +634,7 @@ function DiscountPill({
     >
       <span>{label}</span>
       <span>{value}</span>
-      {active && <span className="text-xs">• queued</span>}
+      {active && <span className="text-[9px]">• queued</span>}
     </div>
   )
 }
@@ -680,7 +659,7 @@ function ActionRow(props: {
       {/* LEFT-SIDE BADGE */}
       {props.badge && (
         <div className="absolute -top-2 -left-1 origin-top-left -rotate-6">
-          <div className="bg-[#C9FF5B] text-[#33264D] text-xs font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60">
+          <div className="bg-[#C9FF5B] text-[#33264D] text-[9px] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60">
             {props.badge}
           </div>
         </div>
@@ -693,17 +672,27 @@ function ActionRow(props: {
       )}
       <div className="flex-1">
         <div className="flex items-center gap-2">
-          <div className="text-sm md:text-base font-medium">{props.title}</div>
+          <div className="text-sm font-medium">{props.title}</div>
           {props.done && funLabel && (
-            <span className="text-xs px-1.5 py-0.5 rounded-full bg-[#C9FF5B]/25 text-[#E8FFD0] border border-[#C9FF5B]/50">
+            <span
+              className="
+                text-[10px]
+                px-2 py-1
+                rounded-full
+                bg-[#C9FF5B]/25 text-[#E8FFD0]
+                border border-[#C9FF5B]/50
+                flex items-center justify-center
+                leading-none
+              "
+            >
               {funLabel}
             </span>
           )}
         </div>
-        <div className="text-sm text-white/80">{props.description}</div>
+        <div className="text-xs text-white/80">{props.description}</div>
       </div>
       <button
-        className="text-sm whitespace-nowrap rounded-xl bg-white text-[#33264D] px-3 py-2 font-semibold hover:bg-[#C9FF5B] transition disabled:opacity-60 disabled:cursor-not-allowed"
+        className="text-[11px] whitespace-nowrap rounded-xl bg-white text-[#33264D] px-3 py-2 font-semibold hover:bg-[#C9FF5B] transition disabled:opacity-60 disabled:cursor-not-allowed"
         onClick={props.onClick}
         disabled={props.done}
       >
