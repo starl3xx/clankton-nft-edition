@@ -39,9 +39,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // For now, we won’t track on-chain supply here – you can wire that later.
-    // Optionally: add a table to track reserved mints if you want off-chain gating.
-
     const result =
       await sql`SELECT * FROM user_discounts WHERE address = ${address} LIMIT 1;`
 
@@ -52,7 +49,9 @@ export async function POST(req: NextRequest) {
     let follow_star = false
     let follow_channel = false
 
-    if (result.rowCount > 0) {
+    const rowCount = result.rowCount ?? 0
+
+    if (rowCount > 0) {
       const row = result.rows[0] as {
         casted: boolean
         tweeted: boolean
@@ -75,9 +74,6 @@ export async function POST(req: NextRequest) {
 
     const price = Math.max(BASE_PRICE - discount, 0)
 
-    // TODO: here is where you'd:
-    // - Construct the transaction data for your CLANKTON payment + NFT mint
-    // - Sign it with a server key, or prepare a calldata blob
     const fakeSignature = "0x" + "00".repeat(65) // placeholder
 
     return NextResponse.json({
