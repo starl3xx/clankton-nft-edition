@@ -459,20 +459,23 @@ useEffect(() => {
           {showHow && (
             <div className="px-4 pb-3 text-sm md:text-base text-white/80 space-y-2">
               <p>
-                • When the mint goes live, anyone can mint an NFT until all 50
+                ✦ When the mint goes live, anyone can mint an NFT until all 50
                 editions are sold out. There is no whitelist or allowlist.
               </p>
               <p>
-                • Discount actions only make your mint cheaper – they do not
+                ✦ Discount actions only make your mint cheaper – they do not
                 give you priority or guarantee a spot.
               </p>
+             <p>
+  ✦ The mint in this mini app is only payable in CLANKTON (
+  <span className="font-mono text-[0.85em] text-[#F6A749]">
+    0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07
+  </span>
+  ). Once you mint, your NFT is a standard ERC-721 token on Base and can
+  be traded on secondary marketplaces.
+</p>
               <p>
-                • The mint in this mini app is only payable in CLANKTON. Once
-                you mint, your NFT is a standard ERC-721 token on Base and can
-                be traded on secondary marketplaces.
-              </p>
-              <p>
-                • If you perform any of the discount actions and have
+                ✦ If you perform any of the discount actions and have
                 notifications enabled, we’ll send you a Farcaster notification
                 when the mint is live.
               </p>
@@ -580,7 +583,7 @@ function CountdownPill({
   if (mintState.phase === "before") {
     return (
       <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs md:text-sm text-white">
-        Mint begins {mintStartLabel} • in {mintState.days}d {mintState.hours}h{" "}
+        Mint begins {mintStartLabel} • {mintState.days}d {mintState.hours}h{" "}
         {mintState.minutes}m {mintState.seconds}s
       </span>
     )
