@@ -121,25 +121,33 @@ export default function ClanktonMintPage() {
     return () => clearInterval(id)
   }, [])
 
-  // tell Farcaster mini app shell we're ready + detect environment
-  useEffect(() => {
-    if (typeof window === "undefined") return
+// tell Farcaster mini app shell we're ready and mark as mini app if it succeeds
+useEffect(() => {
+  if (typeof window === "undefined") return
 
-    const run = async () => {
+  const run = async () => {
+    try {
+      await sdk.actions.ready()
+      console.log("Mini App ready() called successfully")
+
+      // If ready() resolves, we know we're running as a mini app (including dev preview)
+      setIsMiniApp(true)
+
+      // Optional: log context for debugging
       try {
-        await sdk.actions.ready()
-        console.log("Mini App ready() called successfully")
-        const ua = window.navigator.userAgent.toLowerCase()
-        if (ua.includes("warpcast")) {
-          setIsMiniApp(true)
-        }
-      } catch (err) {
-        console.error("Farcaster mini app ready() failed", err)
+        const ctx = await sdk.context.getContext()
+        console.log("Farcaster Mini App context:", ctx)
+      } catch {
+        // ignore, only for debug
       }
+    } catch (err) {
+      console.error("Farcaster mini app ready() failed", err)
+      setIsMiniApp(false)
     }
+  }
 
-    void run()
-  }, [])
+  void run()
+}, [])
 
   const isEnded = mintState.phase === "ended"
   const isNotStarted = mintState.phase === "before"
@@ -439,27 +447,27 @@ const handleFollowStar = () => {
             <div className="flex flex-wrap gap-2 text-xs">
               <DiscountPill
                 label="Cast"
-                value="-2,000,000"
+                value="-2M"
                 active={discounts.casted}
               />
               <DiscountPill
                 label="Tweet"
-                value="-1,000,000"
+                value="-1M"
                 active={discounts.tweeted}
               />
               <DiscountPill
                 label="@thepapercrane"
-                value="-500,000"
+                value="-500K"
                 active={discounts.followTPC}
               />
               <DiscountPill
-                label="@starl3xx.eth"
-                value="-500,000"
+                label="@starl3xx"
+                value="-500K"
                 active={discounts.followStar}
               />
               <DiscountPill
                 label="/clankton"
-                value="-500,000"
+                value="-500K"
                 active={discounts.followChannel}
               />
             </div>
