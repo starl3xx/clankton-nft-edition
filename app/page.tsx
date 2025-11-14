@@ -67,11 +67,23 @@ export default function ClanktonMintPage() {
     query: { enabled: !!address },
   })
 
-  const userAddress = address ?? null
-  const clanktonBalance = clanktonBalanceData
-    ? Number(clanktonBalanceData.formatted)
-    : 0
-  const hasClankton = clanktonBalance > 0
+const userAddress = address ?? null
+
+// Real CLANKTON balance from Farcaster wallet
+const clanktonBalance = clanktonBalanceData
+  ? Number(clanktonBalanceData.formatted)
+  : 0
+
+// Abbreviated format
+const abbrevBalance = formatAbbrev(clanktonBalance)
+
+// Single unified flag
+const hasClankton = clanktonBalance > 0
+
+// Button label
+const buyClanktonLabel = hasClankton
+  ? `${abbrevBalance} CLANKTON — buy more?`
+  : "Buy CLANKTON"
 
   const [loading, setLoading] = useState(false)
   const [discounts, setDiscounts] = useState<DiscountFlags>({
@@ -131,7 +143,7 @@ useEffect(() => {
   const progressPct = Math.min(100, (minted / MAX_SUPPLY) * 100)
 
 const registerDiscountAction = async (addr: string | null | undefined) => {
-  if (!addr) return  // handles null + undefined + ""
+  if (!addr) return
   try {
     await fetch("/api/register-discount-action", {
       method: "POST",
@@ -204,26 +216,63 @@ const handleOpenCastIntent = async () => {
 }
 
 const handleFollowTPC = async () => {
-  await openWarpcastUrl("https://warpcast.com/thepapercrane")
-  setDiscounts((p) => ({ ...p, followTPC: true }))
-  setStatusMessage("Opened @thepapercrane – plz follow!")
-  registerDiscountAction(address)
+  const url = "https://warpcast.com/thepapercrane"
+
+  try {
+    if (isMiniApp) {
+      // open profile inside Warpcast mini app
+      await sdk.actions.openUrl(url)
+    } else {
+      // fallback for normal browser usage
+      window.open(url, "_blank")
+    }
+
+    setDiscounts((p) => ({ ...p, followTPC: true }))
+    setStatusMessage("Opened @thepapercrane – plz follow!")
+    registerDiscountAction(address)
+  } catch (err) {
+    console.error("open @thepapercrane failed", err)
+    setStatusMessage("Couldn’t open @thepapercrane, try again")
+  }
 }
 
 const handleFollowStar = async () => {
-  await openWarpcastUrl("https://warpcast.com/starl3xx.eth")
-  setDiscounts((p) => ({ ...p, followStar: true }))
-  setStatusMessage("Opened @starl3xx.eth – plz follow!")
-  registerDiscountAction(address)
+  const url = "https://warpcast.com/starl3xx.eth"
+
+  try {
+    if (isMiniApp) {
+      await sdk.actions.openUrl(url)
+    } else {
+      window.open(url, "_blank")
+    }
+
+    setDiscounts((p) => ({ ...p, followStar: true }))
+    setStatusMessage("Opened @starl3xx.eth – plz follow!")
+    registerDiscountAction(address)
+  } catch (err) {
+    console.error("open @starl3xx.eth failed", err)
+    setStatusMessage("Couldn’t open @starl3xx.eth, try again")
+  }
 }
 
 const handleFollowChannel = async () => {
-  await openWarpcastUrl("https://warpcast.com/~/channel/clankton")
-  setDiscounts((p) => ({ ...p, followChannel: true }))
-  setStatusMessage("Opened /clankton – plz join!")
-  registerDiscountAction(address)
-}
+  const url = "https://warpcast.com/~/channel/clankton"
 
+  try {
+    if (isMiniApp) {
+      await sdk.actions.openUrl(url)
+    } else {
+      window.open(url, "_blank")
+    }
+
+    setDiscounts((p) => ({ ...p, followChannel: true }))
+    setStatusMessage("Opened /clankton – plz join!")
+    registerDiscountAction(address)
+  } catch (err) {
+    console.error("open /clankton channel failed", err)
+    setStatusMessage("Couldn’t open /clankton, try again")
+  }
+}
   const refreshDiscountsFromServer = async () => {
     if (!userAddress) {
       setStatusMessage("Connect your Warpcast wallet first")
@@ -251,9 +300,24 @@ const handleFollowChannel = async () => {
     }
   }
 
-  const handleBuyClankton = () => {
-    window.open("https://wallet.coinbase.com", "_blank")
+const handleBuyClankton = async () => {
+  try {
+    if (isMiniApp) {
+      await sdk.wallet.open({
+        type: "token",
+        chainId: "eip155:8453", // Base mainnet
+        tokenAddress: "0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07"
+      })
+      return
+    }
+
+    // Fallback for normal browsers
+    window.open("https://warpcast.com/~/wallet", "_blank")
+  } catch (err) {
+    console.error("wallet.open() failed:", err)
+    setStatusMessage("Couldn’t open wallet — try again")
   }
+}
 
   const handleMint = async () => {
     if (!userAddress || !isConnected) {
@@ -488,16 +552,12 @@ const handleFollowChannel = async () => {
               : "Mint with CLANKTON"}
           </button>
 
-          <button
-            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg-white/10 transition"
-            onClick={handleBuyClankton}
-          >
-            {hasClankton
-              ? `${formatBalance(
-                  clanktonBalance,
-                )} CLANKTON — buy more?`
-              : "Buy CLANKTON"}
-          </button>
+<button
+  className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg-white/10 transition"
+  onClick={handleBuyClankton}
+>
+  {buyClanktonLabel}
+</button>
         </div>
 
         {/* FAQ */}
@@ -798,4 +858,10 @@ function formatBalance(v: number) {
   if (!Number.isFinite(v)) return "0"
   if (v >= 1000) return Math.round(v).toLocaleString("en-US")
   return v.toFixed(2)
+}
+function formatAbbrev(num: number): string {
+  if (num >= 1_000_000_000) return (num / 1_000_000_000).toFixed(1) + "B"
+  if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M"
+  if (num >= 1_000) return (num / 1_000).toFixed(1) + "K"
+  return num.toString()
 }
