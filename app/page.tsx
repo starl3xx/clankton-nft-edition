@@ -129,6 +129,9 @@ useEffect(() => {
 
   const isEnded = mintState.phase === "ended"
   const isNotStarted = mintState.phase === "before"
+  
+  const PAPERCRANE_FID = 249958 as number
+  const STARL3XX_FID = 6500 as number
 
   const localDiscount = useMemo(() => {
     let d = 0
@@ -218,42 +221,45 @@ const handleOpenCastIntent = async () => {
 }
 
 const handleFollowTPC = async () => {
-  const url = "https://warpcast.com/thepapercrane"
+  const fallbackUrl = "https://warpcast.com/thepapercrane"
 
   try {
     if (isMiniApp) {
-      // open profile inside Warpcast mini app
-      await sdk.actions.openUrl(url)
+      // Open the profile inside Warpcast
+      await sdk.actions.viewProfile({ fid: PAPERCRANE_FID })
     } else {
-      // fallback for normal browser usage
-      window.open(url, "_blank")
+      // Regular browser fallback
+      window.open(fallbackUrl, "_blank")
     }
 
     setDiscounts((p) => ({ ...p, followTPC: true }))
     setStatusMessage("Opened @thepapercrane – plz follow!")
-    registerDiscountAction(address)
+    await registerDiscountAction(address)
   } catch (err) {
-    console.error("open @thepapercrane failed", err)
-    setStatusMessage("Couldn’t open @thepapercrane, try again")
+    console.error("viewProfile(@thepapercrane) failed, falling back", err)
+    // Last-chance fallback
+    window.open(fallbackUrl, "_blank")
   }
 }
 
 const handleFollowStar = async () => {
-  const url = "https://warpcast.com/starl3xx.eth"
+  const fallbackUrl = "https://warpcast.com/starl3xx.eth"
 
   try {
     if (isMiniApp) {
-      await sdk.actions.openUrl(url)
+      // Open the profile inside Warpcast
+      await sdk.actions.viewProfile({ fid: STARL3XX_FID })
     } else {
-      window.open(url, "_blank")
+      // Regular browser fallback
+      window.open(fallbackUrl, "_blank")
     }
 
     setDiscounts((p) => ({ ...p, followStar: true }))
     setStatusMessage("Opened @starl3xx.eth – plz follow!")
-    registerDiscountAction(address)
+    await registerDiscountAction(address)
   } catch (err) {
-    console.error("open @starl3xx.eth failed", err)
-    setStatusMessage("Couldn’t open @starl3xx.eth, try again")
+    console.error("viewProfile(@starl3xx.eth) failed, falling back", err)
+    window.open(fallbackUrl, "_blank")
   }
 }
 
