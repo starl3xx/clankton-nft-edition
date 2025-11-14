@@ -23,6 +23,10 @@ const CLANKTON_TOKEN_ADDRESS =
 const CLANKTON_CAIP19 =
   "eip155:8453/erc20:0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07"
 
+// Farcaster FIDs
+const PAPERCRANE_FID = 249958 as number
+const STARL3XX_FID = 6500 as number
+
 // Dec 3, 2025 00:00 UTC
 const MINT_START = Math.floor(Date.UTC(2025, 11, 3, 0, 0, 0) / 1000)
 const MINT_END = MINT_START + 7 * 24 * 60 * 60
