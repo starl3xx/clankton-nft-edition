@@ -50,22 +50,6 @@ type MintState = {
   seconds: number
 }
 
-// Shape we expect from /api/farcaster/follows?fid=X
-// That API should talk to Neynar server-side and answer:
-//
-//   {
-//     "followTPC": boolean,      // viewer follows PAPERCRANE_FID
-//     "followStar": boolean,     // viewer follows STARL3XX_FID
-//     "followChannel": boolean   // viewer has joined /clankton
-//   }
-//
-// Example (server-side) Neynar code – belongs in route.ts, NOT here:
-//
-//   const res = await fetch(
-//     `https://api.neynar.com/v2/farcaster/user/follows?fid=${viewerFid}`,
-//     { headers: { "api_key": process.env.NEYNAR_API_KEY! } }
-//   )
-//
 
 type FollowsResponse = {
   followTPC: boolean
@@ -131,7 +115,9 @@ export default function ClanktonMintPage() {
   const [showHow, setShowHow] = useState(false)
   const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [lightboxOpen, setLightboxOpen] = useState(false)
-  const [isMiniApp, setIsMiniApp] = useState(false)
+  
+  
+   const [isMiniApp, setIsMiniApp] = useState(false)
 
   // Farcaster viewer fid (only available inside mini app)
   const [viewerFid, setViewerFid] = useState<number | null>(null)
@@ -150,38 +136,51 @@ export default function ClanktonMintPage() {
   useEffect(() => {
     if (typeof window === "undefined") return
 
+    let cancelled = false
+
     const init = async () => {
       try {
         await sdk.actions.ready()
+        if (cancelled) return
+
         setIsMiniApp(true)
         console.log("Mini app ready() OK")
 
-        let ctx: any = null
         try {
-          ctx = await sdk.context
+          const ctx = await sdk.context
+          if (cancelled) return
+
+          const fid =
+            ctx?.viewer && typeof ctx.viewer.fid === "number"
+              ? ctx.viewer.fid
+              : null
+
+          setViewerFid(fid)
+          console.log("Mini-app viewer FID:", fid)
         } catch (e) {
-          console.warn("sdk.context unavailable (dev preview or not in mini app)", e)
+          if (cancelled) return
+          console.warn(
+            "sdk.context unavailable (dev preview or not in mini app)",
+            e,
+          )
           setViewerFid(null)
-          return
         }
-
-        const fid =
-          ctx?.viewer && typeof ctx.viewer.fid === "number"
-            ? ctx.viewer.fid
-            : null
-
-        setViewerFid(fid)
-        console.log("Mini-app viewer FID:", fid)
       } catch (err) {
+        if (cancelled) return
         console.error("Mini app boot failed", err)
         setIsMiniApp(false)
         setViewerFid(null)
       }
     }
 
-    void init()
-  }, [])
+    init()
 
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  
+  
   const isEnded = mintState.phase === "ended"
   const isNotStarted = mintState.phase === "before"
 
@@ -730,7 +729,7 @@ export default function ClanktonMintPage() {
                 <span className="font-mono">{shortAddress(address)}</span>
               </>
             ) : (
-              <span>Warpcast wallet not connected</span>
+              <span>Farcaster wallet not connected</span>
             )}
           </div>
           {statusMessage && (
