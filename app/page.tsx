@@ -126,17 +126,28 @@ const registerDiscountAction = async (action: keyof DiscountFlags) => {
 }
 
 const handleOpenCastIntent = () => {
-  // ...existing text/url stuff...
+  const message =
+    "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
+  const url = "https://clankton-nft-edition.vercel.app"
 
-  window.open(`https://warpcast.com/~/compose?text=${fullText}`, "_blank")
+  const fullText = encodeURIComponent(`${message} ${url}`)
+
+  window.open(
+    `https://warpcast.com/~/compose?text=${fullText}`,
+    "_blank",
+  )
 
   setDiscounts((p) => ({ ...p, casted: true }))
   setStatusMessage("Farcaster opened – don’t forget to cast!")
-  registerDiscountAction("casted")
+  registerDiscountAction()
 }
 
 const handleOpenTweetIntent = () => {
-  // ...existing text/url stuff...
+  const message =
+    "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
+  const url = "https://clankton-nft-edition.vercel.app"
+
+  const fullText = encodeURIComponent(`${message} ${url}`)
 
   window.open(
     `https://twitter.com/intent/tweet?text=${fullText}`,
@@ -145,7 +156,7 @@ const handleOpenTweetIntent = () => {
 
   setDiscounts((p) => ({ ...p, tweeted: true }))
   setStatusMessage("𝕏 opened – don’t forget to tweet!")
-  registerDiscountAction("tweeted")
+  registerDiscountAction()
 }
 
 const handleFollowTPC = () => {
