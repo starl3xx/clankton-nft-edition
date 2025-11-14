@@ -132,14 +132,6 @@ useEffect(() => {
 
       // If ready() resolves, we know we're running as a mini app (including dev preview)
       setIsMiniApp(true)
-
-      // Optional: log context for debugging
-      try {
-        const ctx = await sdk.context.getContext()
-        console.log("Farcaster Mini App context:", ctx)
-      } catch {
-        // ignore, only for debug
-      }
     } catch (err) {
       console.error("Farcaster mini app ready() failed", err)
       setIsMiniApp(false)
