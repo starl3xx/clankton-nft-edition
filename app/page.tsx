@@ -69,23 +69,23 @@ export default function ClanktonMintPage() {
     query: { enabled: !!address },
   })
 
-const userAddress = address ?? null
+  const userAddress = address ?? null
 
-// Real CLANKTON balance from Farcaster wallet
-const clanktonBalance = clanktonBalanceData
-  ? Number(clanktonBalanceData.formatted)
-  : 0
+  // Real CLANKTON balance from Farcaster wallet
+  const clanktonBalance = clanktonBalanceData
+    ? Number(clanktonBalanceData.formatted)
+    : 0
 
-// Abbreviated format
-const abbrevBalance = formatAbbrev(clanktonBalance)
+  // Abbreviated format
+  const abbrevBalance = formatAbbrev(clanktonBalance)
 
-// Single unified flag
-const hasClankton = clanktonBalance > 0
+  // Single unified flag
+  const hasClankton = clanktonBalance > 0
 
-// Button label
-const buyClanktonLabel = hasClankton
-  ? `${abbrevBalance} CLANKTON — buy more?`
-  : "Buy CLANKTON"
+  // Button label
+  const buyClanktonLabel = hasClankton
+    ? `${abbrevBalance} CLANKTON — buy more?`
+    : "Buy CLANKTON"
 
   const [loading, setLoading] = useState(false)
   const [discounts, setDiscounts] = useState<DiscountFlags>({
@@ -97,7 +97,14 @@ const buyClanktonLabel = hasClankton
   })
   const [remotePrice, setRemotePrice] = useState<number | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
-  const [mintState, setMintState] = useState<MintState>(() => computeMintState())
+  const [mintState, setMintState] = useState<MintState>({
+    phase: "before",
+    total: 0,
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  })
   const [minted] = useState(0)
   const [showHow, setShowHow] = useState(false)
   const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -109,29 +116,29 @@ const buyClanktonLabel = hasClankton
     const id = setInterval(() => setMintState(computeMintState()), 1000)
     return () => clearInterval(id)
   }, [])
-  
-  // tell Farcaster mini app shell we're ready
-useEffect(() => {
-  if (typeof window === "undefined") return
 
-  const run = async () => {
-    try {
-      await sdk.actions.ready()
-      console.log("Mini App ready() called successfully")
-      setIsMiniApp(true)
-    } catch (err) {
-      console.error("Farcaster mini app ready() failed", err)
+  // tell Farcaster mini app shell we're ready + detect environment
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const run = async () => {
+      try {
+        await sdk.actions.ready()
+        console.log("Mini App ready() called successfully")
+        const ua = window.navigator.userAgent.toLowerCase()
+        if (ua.includes("warpcast")) {
+          setIsMiniApp(true)
+        }
+      } catch (err) {
+        console.error("Farcaster mini app ready() failed", err)
+      }
     }
-  }
 
-  void run()
-}, [])
+    void run()
+  }, [])
 
   const isEnded = mintState.phase === "ended"
   const isNotStarted = mintState.phase === "before"
-  
-  const PAPERCRANE_FID = 249958 as number
-  const STARL3XX_FID = 6500 as number
 
   const localDiscount = useMemo(() => {
     let d = 0
@@ -147,48 +154,46 @@ useEffect(() => {
   const effectivePrice = remotePrice ?? localPrice
   const progressPct = Math.min(100, (minted / MAX_SUPPLY) * 100)
 
-const registerDiscountAction = async (addr: string | null | undefined) => {
-  if (!addr) return
-  try {
-    await fetch("/api/register-discount-action", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address: addr }),
-    })
-  } catch {
-    // ignore for now
-  }
-}
-
-const handleOpenCastIntent = async () => {
-  const text =
-    "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
-  const appUrl = "https://clankton-nft-edition.vercel.app"
-
-  try {
-    if (isMiniApp) {
-      // Native Warpcast composer
-      await sdk.actions.composeCast({
-        text: `${text} ${appUrl}`,
-        embeds: [appUrl],
+  const registerDiscountAction = async (addr: string | null | undefined) => {
+    if (!addr) return
+    try {
+      await fetch("/api/register-discount-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: addr }),
       })
-    } else {
-      // Fallback for normal browsers / non-miniapp
-      const fullText = encodeURIComponent(`${text} ${appUrl}`)
-      window.open(
-        `https://warpcast.com/~/compose?text=${fullText}`,
-        "_blank",
-      )
+    } catch {
+      // ignore for now
     }
-
-    setDiscounts((p) => ({ ...p, casted: true }))
-    setStatusMessage("Farcaster opened – don’t forget to cast!")
-    registerDiscountAction(address)
-  } catch (err) {
-    console.error("composeCast/open cast failed", err)
-    setStatusMessage("Couldn’t open cast composer, try again")
   }
-}
+
+  const handleOpenCastIntent = async () => {
+    const text =
+      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
+    const url = "https://clankton-nft-edition.vercel.app"
+    const fullText = `${text} ${url}`
+    const encoded = encodeURIComponent(fullText)
+    const warpcastComposeUrl = `https://warpcast.com/~/compose?text=${encoded}`
+
+    try {
+      if (isMiniApp) {
+        await sdk.actions.composeCast({ text: fullText })
+      } else {
+        window.open(warpcastComposeUrl, "_blank", "noopener,noreferrer")
+      }
+
+      setDiscounts((p) => ({ ...p, casted: true }))
+      setStatusMessage("Farcaster opened – don’t forget to cast!")
+      await registerDiscountAction(userAddress)
+    } catch (err) {
+      console.error("composeCast/open cast failed", err)
+      try {
+        window.open(warpcastComposeUrl, "_blank", "noopener,noreferrer")
+      } catch {
+        // ignore
+      }
+    }
+  }
 
   const handleOpenTweetIntent = () => {
     const text =
@@ -205,82 +210,68 @@ const handleOpenCastIntent = async () => {
     setStatusMessage("X opened – don’t forget to tweet!")
     registerDiscountAction(userAddress)
   }
-  
-  const openWarpcastUrl = async (url: string) => {
-  try {
-    if (isMiniApp) {
-      // Use SDK; cast to any so TypeScript doesn’t complain about the signature
-      await (sdk.actions as any).openUrl(url)
-    } else {
-      window.open(url, "_blank")
-    }
-  } catch (err) {
-    console.error("openUrl failed, falling back", err)
-    window.open(url, "_blank")
-  }
-}
 
-const handleFollowTPC = async () => {
-  const fallbackUrl = "https://warpcast.com/thepapercrane"
+  const handleFollowTPC = () => {
+    const profileUrl = "https://warpcast.com/thepapercrane"
 
-  try {
     if (isMiniApp) {
-      // Open the profile inside Warpcast
-      await sdk.actions.viewProfile({ fid: PAPERCRANE_FID })
+      ;(async () => {
+        try {
+          await sdk.actions.viewProfile({ username: "thepapercrane" })
+        } catch (err) {
+          console.error("viewProfile thepapercrane failed, falling back", err)
+          window.open(profileUrl, "_blank")
+        }
+      })()
     } else {
-      // Regular browser fallback
-      window.open(fallbackUrl, "_blank")
+      window.open(profileUrl, "_blank")
     }
 
     setDiscounts((p) => ({ ...p, followTPC: true }))
     setStatusMessage("Opened @thepapercrane – plz follow!")
-    await registerDiscountAction(address)
-  } catch (err) {
-    console.error("viewProfile(@thepapercrane) failed, falling back", err)
-    // Last-chance fallback
-    window.open(fallbackUrl, "_blank")
+    registerDiscountAction(userAddress)
   }
-}
 
-const handleFollowStar = async () => {
-  const fallbackUrl = "https://warpcast.com/starl3xx.eth"
+  const handleFollowStar = () => {
+    const profileUrl = "https://warpcast.com/starl3xx.eth"
 
-  try {
     if (isMiniApp) {
-      // Open the profile inside Warpcast
-      await sdk.actions.viewProfile({ fid: STARL3XX_FID })
+      ;(async () => {
+        try {
+          await sdk.actions.viewProfile({ username: "starl3xx.eth" })
+        } catch (err) {
+          console.error("viewProfile starl3xx.eth failed, falling back", err)
+          window.open(profileUrl, "_blank")
+        }
+      })()
     } else {
-      // Regular browser fallback
-      window.open(fallbackUrl, "_blank")
+      window.open(profileUrl, "_blank")
     }
 
     setDiscounts((p) => ({ ...p, followStar: true }))
     setStatusMessage("Opened @starl3xx.eth – plz follow!")
-    await registerDiscountAction(address)
-  } catch (err) {
-    console.error("viewProfile(@starl3xx.eth) failed, falling back", err)
-    window.open(fallbackUrl, "_blank")
+    registerDiscountAction(userAddress)
   }
-}
 
-const handleFollowChannel = async () => {
-  const url = "https://warpcast.com/~/channel/clankton"
+  const handleFollowChannel = async () => {
+    const url = "https://warpcast.com/~/channel/clankton"
 
-  try {
-    if (isMiniApp) {
-      await sdk.actions.openUrl(url)
-    } else {
-      window.open(url, "_blank")
+    try {
+      if (isMiniApp) {
+        await sdk.actions.openUrl(url)
+      } else {
+        window.open(url, "_blank")
+      }
+
+      setDiscounts((p) => ({ ...p, followChannel: true }))
+      setStatusMessage("Opened /clankton – plz join!")
+      registerDiscountAction(userAddress)
+    } catch (err) {
+      console.error("open /clankton channel failed", err)
+      setStatusMessage("Couldn’t open /clankton, try again")
     }
-
-    setDiscounts((p) => ({ ...p, followChannel: true }))
-    setStatusMessage("Opened /clankton – plz join!")
-    registerDiscountAction(address)
-  } catch (err) {
-    console.error("open /clankton channel failed", err)
-    setStatusMessage("Couldn’t open /clankton, try again")
   }
-}
+
   const refreshDiscountsFromServer = async () => {
     if (!userAddress) {
       setStatusMessage("Connect your Warpcast wallet first")
@@ -308,25 +299,23 @@ const handleFollowChannel = async () => {
     }
   }
 
-const handleBuyClankton = async () => {
-  // Fallback URL for non-mini-app environments (desktop browser, etc.)
-  const fallbackUrl = "https://app.uniswap.org/swap?outputCurrency=0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07&chain=base"
+  const handleBuyClankton = async () => {
+    const fallbackUrl =
+      "https://app.uniswap.org/swap?outputCurrency=0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07&chain=base"
 
-  try {
-    if (isMiniApp) {
-      // Inside Warpcast Mini App → open the CLANKTON token in the wallet
-      await sdk.actions.viewToken({
-        token: CLANKTON_CAIP19,
-      })
-    } else {
-      // Regular browser: just open a fallback page
+    try {
+      if (isMiniApp) {
+        await sdk.actions.viewToken({
+          token: CLANKTON_CAIP19,
+        })
+      } else {
+        window.open(fallbackUrl, "_blank")
+      }
+    } catch (err) {
+      console.error("viewToken failed, falling back to external URL", err)
       window.open(fallbackUrl, "_blank")
     }
-  } catch (err) {
-    console.error("viewToken failed, falling back to external URL", err)
-    window.open(fallbackUrl, "_blank")
   }
-}
 
   const handleMint = async () => {
     if (!userAddress || !isConnected) {
@@ -412,7 +401,7 @@ const handleBuyClankton = async () => {
           {/* Right: edition + countdown + progress */}
           <div className="flex-1 flex flex-col justify-between h-32">
             <div className="space-y-2">
-              <div className="text-[11px] uppercase tracking-wide text-white/75">
+              <div className="text-xs uppercase tracking-wide text-white/75">
                 Edition of 50&nbsp;&nbsp;✪&nbsp;&nbsp;ERC-721 on Base
               </div>
               <CountdownPill mintState={mintState} mintStartLabel="Dec 3" />
@@ -435,7 +424,7 @@ const handleBuyClankton = async () => {
                 {formatClankton(effectivePrice)}{" "}
                 <span className="text-sm tracking-wide">CLANKTON</span>
               </div>
-              <div className="text-[11px] text-white/70 mt-1">
+              <div className="text-xs text-white/70 mt-1">
                 Base price {formatClankton(BASE_PRICE)} − discounts{" "}
                 {formatClankton(localDiscount)}
               </div>
@@ -443,7 +432,7 @@ const handleBuyClankton = async () => {
           </div>
 
           <div className="mt-3">
-            <div className="flex flex-wrap gap-2 text-[11px]">
+            <div className="flex flex-wrap gap-2 text-xs">
               <DiscountPill
                 label="Cast"
                 value="-2,000,000"
@@ -474,7 +463,7 @@ const handleBuyClankton = async () => {
         </div>
 
         {/* Discounts header */}
-        <div className="text-m text-white/90 tracking-wide text-center uppercase mt-1 mb-1 font-bold">
+        <div className="text-base text-white/90 tracking-wide text-center uppercase mt-1 mb-1 font-bold">
           ✨ Super simple mint discounts ✨
         </div>
 
@@ -493,7 +482,7 @@ const handleBuyClankton = async () => {
           <ActionRow
             icon={
               <div className="h-full w-full flex items-center justify-center bg-black text-white rounded-full">
-                <span className="text-[1.2em] font-bold">𝕏</span>
+                <span className="text-lg font-bold">𝕏</span>
               </div>
             }
             title="Tweet about this mint"
@@ -561,12 +550,12 @@ const handleBuyClankton = async () => {
               : "Mint with CLANKTON"}
           </button>
 
-<button
-  className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg-white/10 transition"
-  onClick={handleBuyClankton}
->
-  {buyClanktonLabel}
-</button>
+          <button
+            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg-white/10 transition"
+            onClick={handleBuyClankton}
+          >
+            {buyClanktonLabel}
+          </button>
         </div>
 
         {/* FAQ */}
@@ -579,7 +568,7 @@ const handleBuyClankton = async () => {
             <span className="text-white/70">{showHow ? "−" : "+"}</span>
           </button>
           {showHow && (
-            <div className="px-4 pb-3 text-[11px] text-white/80 space-y-2">
+            <div className="px-4 pb-3 text-xs text-white/80 space-y-2">
               <p>
                 ✪ When the mint goes live, anyone can mint an NFT until all 50
                 editions are sold out. There is no whitelist or allowlist.
@@ -607,17 +596,15 @@ const handleBuyClankton = async () => {
         </div>
 
         {/* Footer: wallet + status */}
-        <div className="flex items-center justify-between text-[11px] text-white/80 pt-1">
+        <div className="flex items-center justify-between text-xs text-white/80 pt-1">
           <div>
-            {userAddress ? (
+            {address ? (
               <>
                 Warpcast wallet:{" "}
-                <span className="font-mono">
-                  {shortAddress(userAddress)}
-                </span>
+                <span className="font-mono">{shortAddress(address)}</span>
               </>
             ) : (
-              <>Warpcast wallet: not connected</>
+              <span>Warpcast wallet not connected</span>
             )}
           </div>
           {statusMessage && (
@@ -627,7 +614,7 @@ const handleBuyClankton = async () => {
           )}
         </div>
 
-        <div className="text-[10px] text-white/70 text-right pb-2">
+        <div className="text-xs text-white/70 text-right pb-2">
           Discounts applied once per wallet (hopefully) — this was vibe coded,
           so who really knows? ¯\_(ツ)_/¯
         </div>
@@ -636,21 +623,21 @@ const handleBuyClankton = async () => {
       {/* Lightbox preview */}
       {lightboxOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 transition-opacity duration-200"
           onClick={() => setLightboxOpen(false)}
         >
           <div
-            className="relative w-[min(96vw,480px)]"
+            className="relative w-[min(96vw,480px)] p-3 rounded-3xl bg-black/40 backdrop-blur-md border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.7)] transform transition-all duration-200 ease-out"
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              className="absolute -top-8 right-0 text-xs text-white/80 hover:text-white"
+              className="absolute -top-10 right-0 text-sm tracking-wide text-white/90 hover:text-white font-semibold flex items-center gap-1"
               onClick={() => setLightboxOpen(false)}
             >
-              close ✕
+              CLOSE <span className="text-base leading-none">✕</span>
             </button>
 
-            <div className="w-full aspect-square rounded-3xl overflow-hidden border border-white/25 shadow-[0_0_40px_rgba(0,0,0,0.7)]">
+            <div className="w-full aspect-square rounded-3xl overflow-hidden border border-white/25">
               <Image
                 src="/papercrane-sample.jpg"
                 alt="thepapercrane × CLANKTON artwork (preview)"
@@ -703,7 +690,7 @@ function CountdownPill({
 }) {
   if (mintState.phase === "ended") {
     return (
-      <span className="px-2 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-500/40 text-[11px]">
+      <span className="px-2 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-500/40 text-xs">
         Mint ended
       </span>
     )
@@ -711,7 +698,7 @@ function CountdownPill({
 
   if (mintState.phase === "before") {
     return (
-      <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px] text-white">
+      <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text-white">
         Mint → {mintStartLabel}&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
         {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
         {mintState.seconds}s
@@ -720,7 +707,7 @@ function CountdownPill({
   }
 
   return (
-    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px] text-white">
+    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text-white">
       Mint ends in {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
       {mintState.seconds}s
     </span>
@@ -738,7 +725,7 @@ function EditionProgress({
 }) {
   return (
     <div className="mt-2 space-y-1">
-      <div className="flex items-center justify-between text-[11px] text-white/85">
+      <div className="flex items-center justify-between text-xs text-white/85">
         <span>
           {minted} / {maxSupply} minted
         </span>
@@ -765,7 +752,7 @@ function DiscountPill({
 }) {
   return (
     <div
-      className={`px-2 py-1 rounded-full border text-[11px] flex items-center gap-1 ${
+      className={`px-2 py-1 rounded-full border text-xs flex items-center gap-1 ${
         active
           ? "border-[#C9FF5B] bg-[#C9FF5B]/15 text-[#E8FFD0]"
           : "border-white/30 text-white/70"
@@ -773,7 +760,7 @@ function DiscountPill({
     >
       <span>{label}</span>
       <span>{value}</span>
-      {active && <span className="text-[9px]">• queued</span>}
+      {active && <span className="text-xs">• queued</span>}
     </div>
   )
 }
@@ -798,7 +785,7 @@ function ActionRow(props: {
       {/* LEFT-SIDE BADGE */}
       {props.badge && (
         <div className="absolute -top-2 -left-1 origin-top-left -rotate-6">
-          <div className="bg-[#C9FF5B] text-[#33264D] text-[9px] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60">
+          <div className="bg-[#C9FF5B] text-[#33264D] text-[0.6rem] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60">
             {props.badge}
           </div>
         </div>
@@ -815,7 +802,7 @@ function ActionRow(props: {
           {props.done && funLabel && (
             <span
               className="
-                text-[10px]
+                text-xs
                 px-2 py-1
                 rounded-full
                 bg-[#C9FF5B]/25 text-[#E8FFD0]
@@ -831,7 +818,7 @@ function ActionRow(props: {
         <div className="text-xs text-white/80">{props.description}</div>
       </div>
       <button
-        className="text-[11px] whitespace-nowrap rounded-xl bg-white text-[#33264D] px-3 py-2 font-semibold hover:bg-[#C9FF5B] transition disabled:opacity-60 disabled:cursor-not-allowed"
+        className="text-xs whitespace-nowrap rounded-xl bg-white text-[#33264D] px-3 py-2 font-semibold hover:bg-[#C9FF5B] transition disabled:opacity-60 disabled:cursor-not-allowed"
         onClick={props.onClick}
         disabled={props.done}
       >
@@ -863,11 +850,6 @@ function shortAddress(addr: string) {
   return `${addr.slice(0, 4)}...${addr.slice(-4)}`
 }
 
-function formatBalance(v: number) {
-  if (!Number.isFinite(v)) return "0"
-  if (v >= 1000) return Math.round(v).toLocaleString("en-US")
-  return v.toFixed(2)
-}
 function formatAbbrev(num: number): string {
   if (num >= 1_000_000_000) return (num / 1_000_000_000).toFixed(1) + "B"
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M"
