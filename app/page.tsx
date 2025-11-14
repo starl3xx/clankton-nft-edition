@@ -50,8 +50,26 @@ export default function ClanktonMintPage() {
   const [remotePrice, setRemotePrice] = useState<number | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [mintState, setMintState] = useState<MintState>(() => computeMintState())
-  const [minted] = useState(0)
+  const [minted] = useState(0) // TODO: replace with real on-chain supply
   const [showHow, setShowHow] = useState(false)
+
+  const [artTilt, setArtTilt] = useState({ x: 0, y: 0 })
+
+  const handleArtMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const relX = (e.clientX - rect.left) / rect.width - 0.5 // -0.5..0.5
+    const relY = (e.clientY - rect.top) / rect.height - 0.5
+    const maxTilt = 6 // degrees
+
+    setArtTilt({
+      x: -relX * maxTilt, // rotateY
+      y: relY * maxTilt,  // rotateX
+    })
+  }
+
+  const handleArtMouseLeave = () => {
+    setArtTilt({ x: 0, y: 0 })
+  }
 
   // countdown
   useEffect(() => {
@@ -77,6 +95,7 @@ export default function ClanktonMintPage() {
   const progressPct = Math.min(100, (minted / MAX_SUPPLY) * 100)
 
   const handleConnectWallet = async () => {
+    // TODO: replace with real wallet connect (wagmi / mini-app wallet)
     const fakeAddress = "0x1234...abcd"
     setAddress(fakeAddress)
     setStatusMessage("Wallet connected (placeholder)")
@@ -90,8 +109,8 @@ export default function ClanktonMintPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address }),
       })
-    } catch {
-      // ignore
+    } catch (e) {
+      console.error("Failed to register discount action", e)
     }
   }
 
@@ -165,7 +184,8 @@ export default function ClanktonMintPage() {
       })
       setRemotePrice(Number(data.price))
       setStatusMessage("Discounts refreshed from server")
-    } catch {
+    } catch (err) {
+      console.error(err)
       setStatusMessage("Could not refresh discounts")
     } finally {
       setLoading(false)
@@ -173,6 +193,7 @@ export default function ClanktonMintPage() {
   }
 
   const handleBuyClankton = () => {
+    // TODO: deep-link to CLANKTON trading inside mini-app wallet
     window.open("https://wallet.coinbase.com", "_blank")
   }
 
@@ -200,12 +221,16 @@ export default function ClanktonMintPage() {
         body: JSON.stringify({ address }),
       })
       if (!res.ok) throw new Error("Failed to prepare mint")
-      await res.json()
 
+      const data = await res.json()
+      console.log("Call minter.mint with:", data)
+
+      // placeholder delay
       await new Promise((resolve) => setTimeout(resolve, 1200))
 
       setStatusMessage("Mint successful – you’re now a CLANKTON enjoyooor")
-    } catch {
+    } catch (err) {
+      console.error(err)
       setStatusMessage("Mint failed – try again")
     } finally {
       setLoading(false)
@@ -214,43 +239,59 @@ export default function ClanktonMintPage() {
 
   return (
     <div className="min-h-screen bg-[#8F80AA] text-white px-4 py-8">
-      {/* Phone-width card */}
-      <div className="w-[420px] max-w-full mx-auto rounded-3xl border border-[#33264D]/60 bg-[#6E6099]/80 p-5 space-y-5 shadow-[0_0_40px_rgba(25,10,50,0.7)]">
-        {/* Top: artwork + header */}
-        <div className="flex gap-4">
-          <div className="h-20 w-20 rounded-2xl bg-[#33264D] border border-white/25 overflow-hidden flex items-center justify-center">
-            <Image
-              src="/papercrane.jpg"
-              alt="CLANKTON"
-              width={80}
-              height={80}
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <div className="flex-1 space-y-1">
-            <div className="flex items-center justify-between text-[11px] uppercase tracking-wide">
-              <span className="text-white/75">Edition of 50 • Base</span>
-              <CountdownPill mintState={mintState} mintStartLabel="Dec 3" />
-            </div>
-            <h1 className="text-lg font-semibold leading-tight">
-              thepapercrane × $CLANKTON NFT
-            </h1>
-            <EditionProgress
-              minted={minted}
-              maxSupply={MAX_SUPPLY}
-              pct={progressPct}
-            />
-          </div>
-        </div>
+      <div className="w-[420px] max-w-full mx-auto space-y-5">
+{/* Top: artwork + mint meta */}
+<div className="flex gap-4 items-stretch">
+  {/* Left: artwork with shine + parallax */}
+  <div className="basis-1/3">
+    {/* Outer: tilt only */}
+    <div
+      className="w-full aspect-square"
+      onMouseMove={handleArtMouseMove}
+      onMouseLeave={handleArtMouseLeave}
+      style={{
+        transform: `perspective(700px) rotateX(${artTilt.y}deg) rotateY(${artTilt.x}deg)`,
+        transition: "transform 120ms ease-out",
+      }}
+    >
+      {/* Inner: rounded, clipped, shiny */}
+      <div className="h-full w-full rounded-3xl bg-[#33264D] border border-white/25 art-shine">
+        <Image
+          src="/papercrane-sample.jpg"
+          alt="thepapercrane × CLANKTON artwork"
+          width={400}
+          height={400}
+          className="h-full w-full object-cover"
+        />
+      </div>
+    </div>
+  </div>
+
+  {/* Right: edition + countdown + progress */}
+  <div className="flex-1 flex flex-col justify-between h-32">
+    <div className="space-y-2">
+      <div className="text-[11px] uppercase tracking-wide text-white/75">
+        Edition of 50 ✦ Base
+      </div>
+      <CountdownPill mintState={mintState} mintStartLabel="Dec 3" />
+    </div>
+
+    <EditionProgress
+      minted={minted}
+      maxSupply={MAX_SUPPLY}
+      pct={progressPct}
+    />
+  </div>
+</div>
 
         {/* Price card */}
-        <div className="rounded-2xl bg-[#33264D]/70 border border-white/15 p-4 space-y-3">
+        <div className="rounded-3xl bg-[#6E6099] border border-white/10 p-4 space-y-3 shadow-[0_0_22px_rgba(255,255,255,0.18)]">
           <div className="flex items-start justify-between">
             <div className="text-sm text-white/80">Your price</div>
             <div className="text-right">
               <div className="text-2xl font-mono-price">
                 {formatClankton(effectivePrice)}{" "}
-                <span className="text-sm tracking-wide font-sans">
+                <span className="text-sm tracking-wide">
                   CLANKTON
                 </span>
               </div>
@@ -294,7 +335,7 @@ export default function ClanktonMintPage() {
 
         {/* Discounts header */}
         <div className="text-[14px] text-white/90 tracking-wide text-center uppercase mt-1 mb-1 font-bold">
-          ✨ Super easy mint discounts ✨
+          ✨ Super simple mint discounts ✨
         </div>
 
         {/* Actions */}
@@ -303,7 +344,8 @@ export default function ClanktonMintPage() {
             icon={<Avatar src="/farcaster.jpg" alt="Farcaster" />}
             title="Cast about this mint"
             description="Post on Farcaster and earn a 2,000,000 CLANKTON discount"
-            ctaLabel={discounts.casted ? "Cast again" : "Open cast composer"}
+            ctaLabel="Cast"
+            badge="2M OFF!"
             onClick={handleOpenCastIntent}
             done={discounts.casted}
           />
@@ -311,12 +353,13 @@ export default function ClanktonMintPage() {
           <ActionRow
             icon={
               <div className="h-full w-full flex items-center justify-center bg-black text-white rounded-full">
-                <span className="text-[1.2em] font-bold">𝕏</span>
+                <span className="text-[1.1em]">𝕏</span>
               </div>
             }
             title="Tweet about this mint"
-            description="Post on X and earn a 1,000,000 CLANKTON discount"
-            ctaLabel={discounts.tweeted ? "Tweet again" : "Open tweet composer"}
+            description="Post on 𝕏 and earn a 1,000,000 CLANKTON discount"
+            ctaLabel="Tweet"
+            badge="1M OFF!"
             onClick={handleOpenTweetIntent}
             done={discounts.tweeted}
           />
@@ -325,9 +368,8 @@ export default function ClanktonMintPage() {
             icon={<Avatar src="/papercrane.jpg" alt="@thepapercrane avatar" />}
             title="Follow @thepapercrane"
             description="Follow the artist on Farcaster for a 500,000 CLANKTON discount"
-            ctaLabel={
-              discounts.followTPC ? "View profile" : "Follow on Farcaster"
-            }
+            ctaLabel="Follow"
+            badge="500K OFF!"
             onClick={handleFollowTPC}
             done={discounts.followTPC}
           />
@@ -335,10 +377,9 @@ export default function ClanktonMintPage() {
           <ActionRow
             icon={<Avatar src="/starl3xx.png" alt="@starl3xx.eth avatar" />}
             title="Follow @starl3xx.eth"
-            description="Follow the CLANKTON clanker for a 500,000 CLANKTON discount"
-            ctaLabel={
-              discounts.followStar ? "View profile" : "Follow on Farcaster"
-            }
+            description="Follow the CLANKTON Clanker for a 500,000 CLANKTON discount"
+            ctaLabel="Follow"
+            badge="500K OFF!"
             onClick={handleFollowStar}
             done={discounts.followStar}
           />
@@ -347,11 +388,10 @@ export default function ClanktonMintPage() {
             icon={
               <Avatar src="/clankton-purple.png" alt="CLANKTON channel icon" />
             }
-            title="Follow /clankton channel"
+            title="Follow the /clankton channel"
             description="Join the CLANKTON channel for a 500,000 CLANKTON discount"
-            ctaLabel={
-              discounts.followChannel ? "View channel" : "Follow /clankton"
-            }
+            ctaLabel="Follow"
+            badge="500K OFF!"
             onClick={handleFollowChannel}
             done={discounts.followChannel}
           />
@@ -382,7 +422,7 @@ export default function ClanktonMintPage() {
           </button>
 
           <button
-            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg-white/10 transition"
+            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg_white/10 hover:bg-white/10 transition"
             onClick={handleBuyClankton}
           >
             Buy CLANKTON
@@ -390,7 +430,7 @@ export default function ClanktonMintPage() {
         </div>
 
         {/* How does this work? */}
-        <div className="rounded-2xl border border-white/20 bg-[#33264D]/70">
+        <div className="rounded-2xl border border-white/20 bg-[#6E6099] shadow-[0_0_18px_rgba(255,255,255,0.14)]">
           <button
             className="w-full px-4 py-3 flex items-center justify-between text-xs text-white/85"
             onClick={() => setShowHow((v) => !v)}
@@ -440,7 +480,7 @@ export default function ClanktonMintPage() {
           )}
         </div>
 
-        <div className="text-[10px] text-white/70 text-right">
+        <div className="text-[10px] text-white/70 text-right pb-2">
           Discounts applied once per wallet. Payment in CLANKTON on Base.
         </div>
       </div>
@@ -499,7 +539,7 @@ function CountdownPill({
   }
 
   return (
-    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px] text-white">
+    <span className="px-2 py-1 rounded-full bg_white/15 bg-white/15 border border-white/35 text-[11px] text-white">
       Mint ends in {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
       {mintState.seconds}s
     </span>
@@ -564,14 +604,26 @@ function ActionRow(props: {
   ctaLabel: string
   onClick: () => void
   done?: boolean
+  badge?: string
 }) {
   return (
-    <div className="rounded-2xl border border-white/25 bg-[#33264D]/70 p-3 flex items-center gap-3">
+    <div className="relative rounded-3xl border border-white/20 bg-[#6E6099] p-3 flex items-center gap-3 shadow-[0_0_18px_rgba(255,255,255,0.14)]">
+      
+      {/* LEFT-SIDE BADGE */}
+      {props.badge && (
+        <div className="absolute -top-2 -left-1 origin-top-left -rotate-6">
+          <div className="bg-[#C9FF5B] text-[#33264D] text-[9px] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60">
+            {props.badge}
+          </div>
+        </div>
+      )}
+
       {props.icon && (
         <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center border border-white/30 overflow-hidden shrink-0">
           {props.icon}
         </div>
       )}
+
       <div className="flex-1">
         <div className="flex items-center gap-2">
           <div className="text-sm font-medium">{props.title}</div>
@@ -583,6 +635,7 @@ function ActionRow(props: {
         </div>
         <div className="text-xs text-white/80">{props.description}</div>
       </div>
+
       <button
         className="text-[11px] whitespace-nowrap rounded-xl bg-white text-[#33264D] px-3 py-2 font-semibold hover:bg-[#C9FF5B] transition"
         onClick={props.onClick}

@@ -26,3 +26,42 @@ body {
     monospace
   );
 }
+
+/* Shiny artwork container (inner wrapper) */
+.art-shine {
+  position: relative;
+  overflow: hidden;        /* clip shine */
+  border-radius: 1.5rem;   /* match Tailwind rounded-3xl */
+}
+
+/* Moving highlight, clipped to same radius */
+.art-shine::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  border-radius: 1.5rem;   /* same as container, avoids Safari inherit weirdness */
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.26) 45%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0.26) 55%,
+    transparent 100%
+  );
+  transform: translateX(-140%);
+  animation: art-shine-sweep 4.2s ease-in-out infinite;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+@keyframes art-shine-sweep {
+  0% {
+    transform: translateX(-140%);
+  }
+  60% {
+    transform: translateX(140%);
+  }
+  100% {
+    transform: translateX(140%);
+  }
+}
