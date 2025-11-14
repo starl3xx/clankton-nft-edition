@@ -29,48 +29,45 @@ async function getCurrentRow(address: string): Promise<DbRow | null> {
 }
 
 export async function POST(req: NextRequest) {
-  let body: any
   try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
-  }
+    const body = await req.json().catch(() => null)
 
-  const address = typeof body?.address === "string" ? body.address : null
-  const action = body?.action as Action | undefined
+    const address = typeof body?.address === "string" ? body.address : null
+    const action = body?.action as Action | undefined
 
-  if (!address || !action) {
-    return NextResponse.json(
-      { error: "Missing address or action", body },
-      { status: 400 },
-    )
-  }
+    if (!address || !action) {
+      return NextResponse.json(
+        { error: "Missing address or action", received: body },
+        { status: 400 },
+      )
+    }
 
-  const normalized = address.toLowerCase()
+    const normalized = address.toLowerCase()
 
-  const current = (await getCurrentRow(normalized)) ?? {
-    casted: false,
-    tweeted: false,
-    follow_tpc: false,
-    follow_star: false,
-    follow_channel: false,
-  }
+    const current = (await getCurrentRow(normalized)) ?? {
+      casted: false,
+      tweeted: false,
+      follow_tpc: false,
+      follow_star: false,
+      follow_channel: false,
+    }
 
-  const updated: DbRow = {
-    casted: current.casted ?? false,
-    tweeted: current.tweeted ?? false,
-    follow_tpc: current.follow_tpc ?? false,
-    follow_star: current.follow_star ?? false,
-    follow_channel: current.follow_channel ?? false,
-  }
+    const updated: DbRow = {
+      ...current,
+      casted: current.casted ?? false,
+      tweeted: current.tweeted ?? false,
+      follow_tpc: current.follow_tpc ?? false,
+      follow_star: current.follow_star ?? false,
+      follow_channel: current.follow_channel ?? false,
+    }
 
-  if (action === "cast") updated.casted = true
-  if (action === "tweet") updated.tweeted = true
-  if (action === "follow_tpc") updated.follow_tpc = true
-  if (action === "follow_star") updated.follow_star = true
-  if (action === "follow_channel") updated.follow_channel = true
+    // Flip the appropriate flag to true
+    if (action === "cast") updated.casted = true
+    if (action === "tweet") updated.tweeted = true
+    if (action === "follow_tpc") updated.follow_tpc = true
+    if (action === "follow_star") updated.follow_star = true
+    if (action === "follow_channel") updated.follow_channel = true
 
-  try {
     await sql`
       INSERT INTO clankton_discounts (
         address,
@@ -93,21 +90,19 @@ export async function POST(req: NextRequest) {
         tweeted        = EXCLUDED.tweeted,
         follow_tpc     = EXCLUDED.follow_tpc,
         follow_star    = EXCLUDED.follow_star,
-        follow_channel = EXCLUDED.follow_channel,
-        updated_at     = NOW();      -- remove this line if you don't have updated_at
+        follow_channel = EXCLUDED.follow_channel;
     `
-  } catch (err) {
-    console.error("register-discount-action: SQL error", err)
+
+    return NextResponse.json({ ok: true })
+  } catch (err: unknown) {
+    console.error("register-discount-action fatal error", err)
     return NextResponse.json(
-      { error: "DB error", details: String(err) },
+      {
+        error: "Internal server error",
+        message:
+          err instanceof Error ? err.message : "Unknown error in register route",
+      },
       { status: 500 },
     )
   }
-
-  return NextResponse.json({
-    ok: true,
-    address: normalized,
-    action,
-    flags: updated,
-  })
 }
