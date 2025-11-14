@@ -112,68 +112,62 @@ useEffect(() => {
     setStatusMessage("Wallet connected (placeholder)")
   }
 
-  const registerDiscountAction = async () => {
-    if (!address) return
-    try {
-      await fetch("/api/register-discount-action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address }),
-      })
-    } catch {
-      // ignore
-    }
+const registerDiscountAction = async (action: keyof DiscountFlags) => {
+  if (!address) return
+  try {
+    await fetch("/api/register-discount-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address, action }),
+    })
+  } catch {
+    // ignore for now; UI already updated locally
   }
+}
 
-  const handleOpenCastIntent = () => {
-    const text =
-      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
-    const url = encodeURIComponent("https://clankton-nft-edition.vercel.app")
-    const fullText = encodeURIComponent(`${text} ${decodeURIComponent(url)}`)
+const handleOpenCastIntent = () => {
+  // ...existing text/url stuff...
 
-    window.open(`https://warpcast.com/~/compose?text=${fullText}`, "_blank")
+  window.open(`https://warpcast.com/~/compose?text=${fullText}`, "_blank")
 
-    setDiscounts((p) => ({ ...p, casted: true }))
-    setStatusMessage("Cast composer opened – don’t forget to post")
-    registerDiscountAction()
-  }
+  setDiscounts((p) => ({ ...p, casted: true }))
+  setStatusMessage("Farcaster opened – don’t forget to cast!")
+  registerDiscountAction("casted")
+}
 
-  const handleOpenTweetIntent = () => {
-    const text =
-      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
-    const url = encodeURIComponent("https://clankton-nft-edition.vercel.app")
-    const fullText = encodeURIComponent(`${text} ${decodeURIComponent(url)}`)
+const handleOpenTweetIntent = () => {
+  // ...existing text/url stuff...
 
-    window.open(
-      `https://twitter.com/intent/tweet?text=${fullText}`,
-      "_blank",
-    )
+  window.open(
+    `https://twitter.com/intent/tweet?text=${fullText}`,
+    "_blank",
+  )
 
-    setDiscounts((p) => ({ ...p, tweeted: true }))
-    setStatusMessage("Tweet composer opened – don’t forget to post")
-    registerDiscountAction()
-  }
+  setDiscounts((p) => ({ ...p, tweeted: true }))
+  setStatusMessage("𝕏 opened – don’t forget to tweet!")
+  registerDiscountAction("tweeted")
+}
 
-  const handleFollowTPC = () => {
-    window.open("https://farcaster.xyz/thepapercrane", "_blank")
-    setDiscounts((p) => ({ ...p, followTPC: true }))
-    setStatusMessage("Opened @thepapercrane – make sure you follow")
-    registerDiscountAction()
-  }
+const handleFollowTPC = () => {
+  window.open("https://farcaster.xyz/thepapercrane", "_blank")
+  setDiscounts((p) => ({ ...p, followTPC: true }))
+  setStatusMessage("Opened @thepapercrane – plz follow!")
+  registerDiscountAction("followTPC")
+}
 
-  const handleFollowStar = () => {
-    window.open("https://farcaster.xyz/starl3xx.eth", "_blank")
-    setDiscounts((p) => ({ ...p, followStar: true }))
-    setStatusMessage("Opened @starl3xx.eth – make sure you follow")
-    registerDiscountAction()
-  }
+const handleFollowStar = () => {
+  window.open("https://farcaster.xyz/starl3xx.eth", "_blank")
+  setDiscounts((p) => ({ ...p, followStar: true }))
+  setStatusMessage("Opened @starl3xx.eth – plz follow!")
+  registerDiscountAction("followStar")
+}
 
-  const handleFollowChannel = () => {
-    window.open("https://farcaster.xyz/~/channel/clankton", "_blank")
-    setDiscounts((p) => ({ ...p, followChannel: true }))
-    setStatusMessage("Opened /clankton – make sure you join")
-    registerDiscountAction()
-  }
+const handleFollowChannel = () => {
+  window.open("https://farcaster.xyz/~/channel/clankton", "_blank")
+  setDiscounts((p) => ({ ...p, followChannel: true }))
+  setStatusMessage("Opened /clankton – plz follow!")
+  registerDiscountAction("followChannel")
+}
 
   const refreshDiscountsFromServer = async () => {
     if (!address) {
