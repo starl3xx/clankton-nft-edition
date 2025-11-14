@@ -143,18 +143,35 @@ useEffect(() => {
     }
   }
 
-  const handleOpenCastIntent = () => {
-    const text =
-      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
-    const url = encodeURIComponent("https://clankton-nft-edition.vercel.app")
-    const fullText = encodeURIComponent(`${text} ${decodeURIComponent(url)}`)
+const handleOpenCastIntent = async () => {
+  const text =
+    "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
+  const appUrl = "https://clankton-nft-edition.vercel.app"
 
-    window.open(`https://warpcast.com/~/compose?text=${fullText}`, "_blank")
+  try {
+    if (isMiniApp) {
+      // Native Warpcast composer
+      await sdk.actions.composeCast({
+        text: `${text} ${appUrl}`,
+        embeds: [appUrl],
+      })
+    } else {
+      // Fallback for normal browsers / non-miniapp
+      const fullText = encodeURIComponent(`${text} ${appUrl}`)
+      window.open(
+        `https://warpcast.com/~/compose?text=${fullText}`,
+        "_blank",
+      )
+    }
 
     setDiscounts((p) => ({ ...p, casted: true }))
     setStatusMessage("Farcaster opened – don’t forget to cast!")
-    registerDiscountAction(userAddress)
+    registerDiscountAction(address)
+  } catch (err) {
+    console.error("composeCast/open cast failed", err)
+    setStatusMessage("Couldn’t open cast composer, try again")
   }
+}
 
   const handleOpenTweetIntent = () => {
     const text =
@@ -171,27 +188,41 @@ useEffect(() => {
     setStatusMessage("X opened – don’t forget to tweet!")
     registerDiscountAction(userAddress)
   }
-
-  const handleFollowTPC = () => {
-    window.open("https://farcaster.xyz/thepapercrane", "_blank")
-    setDiscounts((p) => ({ ...p, followTPC: true }))
-    setStatusMessage("Opened @thepapercrane – plz follow!")
-    registerDiscountAction(userAddress)
+  
+  const openWarpcastUrl = async (url: string) => {
+  try {
+    if (isMiniApp) {
+      // Use SDK; cast to any so TypeScript doesn’t complain about the signature
+      await (sdk.actions as any).openUrl(url)
+    } else {
+      window.open(url, "_blank")
+    }
+  } catch (err) {
+    console.error("openUrl failed, falling back", err)
+    window.open(url, "_blank")
   }
+}
 
-  const handleFollowStar = () => {
-    window.open("https://farcaster.xyz/starl3xx.eth", "_blank")
-    setDiscounts((p) => ({ ...p, followStar: true }))
-    setStatusMessage("Opened @starl3xx.eth – plz follow!")
-    registerDiscountAction(userAddress)
-  }
+const handleFollowTPC = async () => {
+  await openWarpcastUrl("https://warpcast.com/thepapercrane")
+  setDiscounts((p) => ({ ...p, followTPC: true }))
+  setStatusMessage("Opened @thepapercrane – plz follow!")
+  registerDiscountAction(address)
+}
 
-  const handleFollowChannel = () => {
-    window.open("https://farcaster.xyz/~/channel/clankton", "_blank")
-    setDiscounts((p) => ({ ...p, followChannel: true }))
-    setStatusMessage("Opened /clankton – plz join!")
-    registerDiscountAction(userAddress)
-  }
+const handleFollowStar = async () => {
+  await openWarpcastUrl("https://warpcast.com/starl3xx.eth")
+  setDiscounts((p) => ({ ...p, followStar: true }))
+  setStatusMessage("Opened @starl3xx.eth – plz follow!")
+  registerDiscountAction(address)
+}
+
+const handleFollowChannel = async () => {
+  await openWarpcastUrl("https://warpcast.com/~/channel/clankton")
+  setDiscounts((p) => ({ ...p, followChannel: true }))
+  setStatusMessage("Opened /clankton – plz join!")
+  registerDiscountAction(address)
+}
 
   const refreshDiscountsFromServer = async () => {
     if (!userAddress) {
