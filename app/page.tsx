@@ -64,17 +64,30 @@ export default function ClanktonMintPage() {
   })
   const [remotePrice, setRemotePrice] = useState<number | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
-  const [mintState, setMintState] = useState<MintState>(() => computeMintState())
+const [mintState, setMintState] = useState<MintState>({
+  phase: "before",
+  total: 0,
+  days: 0,
+  hours: 0,
+  minutes: 0,
+  seconds: 0,
+})
   const [minted] = useState(0)
   const [showHow, setShowHow] = useState(false)
   const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
-  // countdown
-  useEffect(() => {
-    const id = setInterval(() => setMintState(computeMintState()), 1000)
-    return () => clearInterval(id)
-  }, [])
+// countdown – run only on client
+useEffect(() => {
+  // set immediately on mount so the first client paint is correct
+  setMintState(computeMintState())
+
+  const id = setInterval(() => {
+    setMintState(computeMintState())
+  }, 1000)
+
+  return () => clearInterval(id)
+}, [])
 
   const isEnded = mintState.phase === "ended"
   const isNotStarted = mintState.phase === "before"
@@ -598,7 +611,7 @@ function EditionProgress({
         </span>
         <span>{Math.round(pct)}%</span>
       </div>
-      <div className="h-1.5 rounded-full bg.white/20 bg-white/20 overflow-hidden">
+      <div className="h-1.5 rounded-full bg-white/20 bg-white/20 overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-[#C9FF5B] to-[#F7FFB2]"
           style={{ width: `${pct}%` }}
