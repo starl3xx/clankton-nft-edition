@@ -51,12 +51,6 @@ type MintState = {
 }
 
 
-type FollowsResponse = {
-  followTPC: boolean
-  followStar: boolean
-  followChannel: boolean
-}
-
 const REACTION_LABELS = [
   "Nice 😏",
   "I see you 🥲",
@@ -180,6 +174,70 @@ export default function ClanktonMintPage() {
       cancelled = true
     }
   }, [])
+  
+  // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
+
+  type FollowsResponse = {
+    followTPC: boolean
+    followStar: boolean
+    followChannel: boolean
+  }
+
+  useEffect(() => {
+    // Only run inside the mini app, once we know the viewer fid
+    if (!isMiniApp) {
+      // console.log("follows-effect: not mini app, skipping")
+      return
+    }
+    if (!viewerFid) {
+      // console.log("follows-effect: no viewerFid yet, skipping")
+      return
+    }
+    if (bootstrappedFollows) {
+      // console.log("follows-effect: already bootstrapped, skipping")
+      return
+    }
+
+    const run = async () => {
+      try {
+        console.log(
+          "follows-effect: calling /api/farcaster/follows for fid",
+          viewerFid,
+        )
+
+        const res = await fetch(`/api/farcaster/follows?fid=${viewerFid}`)
+        if (!res.ok) {
+          const text = await res.text().catch(() => "")
+          console.error(
+            "follows-effect: non-OK response",
+            res.status,
+            text,
+          )
+          throw new Error("Failed to fetch follow data")
+        }
+
+        const data = (await res.json()) as FollowsResponse
+        const { followTPC, followStar, followChannel } = data
+
+        console.log("follows-effect: received", data)
+
+        // Merge into existing discounts; don't unset anything already true
+        setDiscounts(prev => ({
+          ...prev,
+          followTPC: prev.followTPC || followTPC,
+          followStar: prev.followStar || followStar,
+          followChannel: prev.followChannel || followChannel,
+        }))
+
+        setBootstrappedFollows(true)
+      } catch (err) {
+        console.error("follows-effect: failed to bootstrap follows", err)
+      }
+    }
+
+    void run()
+  }, [isMiniApp, viewerFid, bootstrappedFollows, setDiscounts])
+  
   
   
   const isEnded = mintState.phase === "ended"
