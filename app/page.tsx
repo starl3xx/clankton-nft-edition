@@ -121,25 +121,25 @@ export default function ClanktonMintPage() {
     return () => clearInterval(id)
   }, [])
 
-// tell Farcaster mini app shell we're ready and mark as mini app if it succeeds
-useEffect(() => {
-  if (typeof window === "undefined") return
+  // tell Farcaster mini app shell we're ready and mark as mini app if it succeeds
+  useEffect(() => {
+    if (typeof window === "undefined") return
 
-  const run = async () => {
-    try {
-      await sdk.actions.ready()
-      console.log("Mini App ready() called successfully")
+    const run = async () => {
+      try {
+        await sdk.actions.ready()
+        console.log("Mini App ready() called successfully")
 
-      // If ready() resolves, we know we're running as a mini app (including dev preview)
-      setIsMiniApp(true)
-    } catch (err) {
-      console.error("Farcaster mini app ready() failed", err)
-      setIsMiniApp(false)
+        // If ready() resolves, we know we're running as a mini app (including dev preview)
+        setIsMiniApp(true)
+      } catch (err) {
+        console.error("Farcaster mini app ready() failed", err)
+        setIsMiniApp(false)
+      }
     }
-  }
 
-  void run()
-}, [])
+    void run()
+  }, [])
 
   const isEnded = mintState.phase === "ended"
   const isNotStarted = mintState.phase === "before"
@@ -158,176 +158,178 @@ useEffect(() => {
   const effectivePrice = remotePrice ?? localPrice
   const progressPct = Math.min(100, (minted / MAX_SUPPLY) * 100)
 
-type DiscountAction =
-  | "cast"
-  | "tweet"
-  | "follow_tpc"
-  | "follow_star"
-  | "follow_channel"
+  type DiscountAction =
+    | "cast"
+    | "tweet"
+    | "follow_tpc"
+    | "follow_star"
+    | "follow_channel"
 
-const registerDiscountAction = async (
-  addr: string | null | undefined,
-  action: DiscountAction,
-) => {
-  if (!addr) {
-    console.warn("registerDiscountAction: missing address, skipping", { action })
-    return
-  }
-
-  try {
-    const res = await fetch("/api/register-discount-action", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address: addr, action }),
-    })
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "")
-      console.error("register-discount-action: non-OK response", {
-        status: res.status,
-        body: text,
+  const registerDiscountAction = async (
+    addr: string | null | undefined,
+    action: DiscountAction,
+  ) => {
+    if (!addr) {
+      console.warn("registerDiscountAction: missing address, skipping", {
+        action,
       })
       return
     }
 
-    const json = await res.json().catch(() => null)
-    console.log("register-discount-action: success", { addr, action, json })
-  } catch (err) {
-    console.error("register-discount-action: fetch failed", { addr, action, err })
-  }
-}
-
-const handleOpenCastIntent = async () => {
-  const text =
-    "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
-  const url = "https://clankton-nft-edition.vercel.app"
-  const fullText = `${text} ${url}`
-  const encoded = encodeURIComponent(fullText)
-  const warpcastComposeUrl = `https://warpcast.com/~/compose?text=${encoded}`
-
-  try {
-    if (isMiniApp) {
-      await sdk.actions.composeCast({ text: fullText })
-    } else {
-      window.open(warpcastComposeUrl, "_blank", "noopener,noreferrer")
-    }
-
-    setDiscounts((p) => ({ ...p, casted: true }))
-    setStatusMessage("Farcaster opened – don’t forget to cast!")
-    await registerDiscountAction(userAddress, "cast")
-  } catch (err) {
-    console.error("composeCast/open cast failed", err)
     try {
-      window.open(warpcastComposeUrl, "_blank", "noopener,noreferrer")
-    } catch {
-      // ignore
+      const res = await fetch("/api/register-discount-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: addr, action }),
+      })
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "")
+        console.error("register-discount-action: non-OK response", {
+          status: res.status,
+          body: text,
+        })
+      }
+    } catch (err) {
+      console.error("register-discount-action failed", err)
     }
   }
-}
 
-const handleOpenTweetIntent = async () => {
-  const text =
-    "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
-  const url = encodeURIComponent("https://clankton-nft-edition.vercel.app")
-  const fullText = encodeURIComponent(`${text} ${decodeURIComponent(url)}`)
+  const handleOpenCastIntent = async () => {
+    const text =
+      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
+    const url = "https://clankton-nft-edition.vercel.app"
+    const fullText = `${text} ${url}`
+    const encoded = encodeURIComponent(fullText)
+    const warpcastComposeUrl = `https://warpcast.com/~/compose?text=${encoded}`
 
-  window.open(
-    `https://twitter.com/intent/tweet?text=${fullText}`,
-    "_blank",
-  )
-
-  setDiscounts((p) => ({ ...p, tweeted: true }))
-  setStatusMessage("X opened – don’t forget to tweet!")
-  await registerDiscountAction(userAddress, "tweet")
-}
-
-const handleFollowTPC = () => {
-  const profileUrl = "https://warpcast.com/thepapercrane"
-
-  if (isMiniApp) {
-    ;(async () => {
-      try {
-        await sdk.actions.viewProfile({ fid: PAPERCRANE_FID })
-      } catch (err) {
-        console.error("viewProfile thepapercrane failed, falling back", err)
-        window.open(profileUrl, "_blank")
+    try {
+      if (isMiniApp) {
+        await sdk.actions.composeCast({ text: fullText })
+      } else {
+        window.open(warpcastComposeUrl, "_blank", "noopener,noreferrer")
       }
-    })()
-  } else {
-    window.open(profileUrl, "_blank")
+
+      setDiscounts((p) => ({ ...p, casted: true }))
+      setStatusMessage("Farcaster opened – don’t forget to cast!")
+      await registerDiscountAction(userAddress, "cast")
+    } catch (err) {
+      console.error("composeCast/open cast failed", err)
+      try {
+        window.open(warpcastComposeUrl, "_blank", "noopener,noreferrer")
+      } catch {
+        // ignore
+      }
+    }
   }
 
-  setDiscounts((p) => ({ ...p, followTPC: true }))
-  setStatusMessage("Opened @thepapercrane – plz follow!")
-  void registerDiscountAction(userAddress, "follow_tpc")
-}
+  const handleOpenTweetIntent = () => {
+    const text =
+      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
+    const url = encodeURIComponent("https://clankton-nft-edition.vercel.app")
+    const fullText = encodeURIComponent(`${text} ${decodeURIComponent(url)}`)
 
-const handleFollowStar = () => {
-  const profileUrl = "https://warpcast.com/starl3xx.eth"
+    window.open(
+      `https://twitter.com/intent/tweet?text=${fullText}`,
+      "_blank",
+    )
 
-  if (isMiniApp) {
-    ;(async () => {
-      try {
-        await sdk.actions.viewProfile({ fid: STARL3XX_FID })
-      } catch (err) {
-        console.error("viewProfile starl3xx.eth failed, falling back", err)
-        window.open(profileUrl, "_blank")
-      }
-    })()
-  } else {
-    window.open(profileUrl, "_blank")
+    setDiscounts((p) => ({ ...p, tweeted: true }))
+    setStatusMessage("X opened – don’t forget to tweet!")
+    registerDiscountAction(userAddress, "tweet")
   }
 
-  setDiscounts((p) => ({ ...p, followStar: true }))
-  setStatusMessage("Opened @starl3xx.eth – plz follow!")
-  void registerDiscountAction(userAddress, "follow_star")
-}
+  const handleFollowTPC = () => {
+    const profileUrl = "https://warpcast.com/thepapercrane"
 
-const handleFollowChannel = async () => {
-  const url = "https://warpcast.com/~/channel/clankton"
-
-  try {
     if (isMiniApp) {
-      await sdk.actions.openUrl(url)
+      ;(async () => {
+        try {
+          await sdk.actions.viewProfile({ fid: PAPERCRANE_FID })
+        } catch (err) {
+          console.error("viewProfile thepapercrane failed, falling back", err)
+          window.open(profileUrl, "_blank")
+        }
+      })()
     } else {
-      window.open(url, "_blank")
+      window.open(profileUrl, "_blank")
     }
 
-    setDiscounts((p) => ({ ...p, followChannel: true }))
-    setStatusMessage("Opened /clankton – plz join!")
-    await registerDiscountAction(userAddress, "follow_channel")
-  } catch (err) {
-    console.error("open /clankton channel failed", err)
-    setStatusMessage("Couldn’t open /clankton, try again")
+    setDiscounts((p) => ({ ...p, followTPC: true }))
+    setStatusMessage("Opened @thepapercrane – plz follow!")
+    registerDiscountAction(userAddress, "follow_tpc")
   }
-}
 
-const refreshDiscountsFromServer = async () => {
-  if (!userAddress) {
-    setStatusMessage("Connect your Warpcast wallet first")
-    return
+  const handleFollowStar = () => {
+    const profileUrl = "https://warpcast.com/starl3xx.eth"
+
+    if (isMiniApp) {
+      ;(async () => {
+        try {
+          await sdk.actions.viewProfile({ fid: STARL3XX_FID })
+        } catch (err) {
+          console.error("viewProfile starl3xx.eth failed, falling back", err)
+          window.open(profileUrl, "_blank")
+        }
+      })()
+    } else {
+      window.open(profileUrl, "_blank")
+    }
+
+    setDiscounts((p) => ({ ...p, followStar: true }))
+    setStatusMessage("Opened @starl3xx.eth – plz follow!")
+    registerDiscountAction(userAddress, "follow_star")
   }
-  setLoading(true)
-  setStatusMessage(null)
-  try {
-    const res = await fetch(`/api/user-discounts?address=${userAddress}`)
-    if (!res.ok) throw new Error("Failed to fetch discounts")
-    const data = await res.json()
-    setDiscounts({
-      casted: data.casted ?? false,
-      tweeted: data.tweeted ?? false,
-      followTPC: data.followTPC ?? false,
-      followStar: data.followStar ?? false,
-      followChannel: data.followChannel ?? false,
-    })
-    setRemotePrice(Number(data.price))
-    setStatusMessage("Discounts refreshed from server")
-  } catch {
-    setStatusMessage("Could not refresh discounts")
-  } finally {
-    setLoading(false)
+
+  const handleFollowChannel = async () => {
+    const url = "https://warpcast.com/~/channel/clankton"
+
+    try {
+      if (isMiniApp) {
+        await sdk.actions.openUrl(url)
+      } else {
+        window.open(url, "_blank")
+      }
+
+      setDiscounts((p) => ({ ...p, followChannel: true }))
+      setStatusMessage("Opened /clankton – plz join!")
+      registerDiscountAction(userAddress, "follow_channel")
+    } catch (err) {
+      console.error("open /clankton channel failed", err)
+      setStatusMessage("Couldn’t open /clankton, try again")
+    }
   }
-}
+
+  const refreshDiscountsFromServer = async () => {
+    if (!userAddress) {
+      setStatusMessage("Connect your Warpcast wallet first")
+      return
+    }
+    setLoading(true)
+    setStatusMessage(null)
+
+    try {
+      const res = await fetch(`/api/user-discounts?address=${userAddress}`)
+      if (!res.ok) throw new Error("Failed to fetch discounts")
+
+      const data = await res.json()
+
+      setDiscounts({
+        casted: data.casted ?? false,
+        tweeted: data.tweeted ?? false,
+        followTPC: data.followTPC ?? false,
+        followStar: data.followStar ?? false,
+        followChannel: data.followChannel ?? false,
+      })
+
+      setRemotePrice(Number(data.price))
+      setStatusMessage("Discounts refreshed from server")
+    } catch {
+      setStatusMessage("Could not refresh discounts")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleBuyClankton = async () => {
     const fallbackUrl =
@@ -383,17 +385,17 @@ const refreshDiscountsFromServer = async () => {
     }
   }
 
-  const handleArtMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const relX = (e.clientX - rect.left) / rect.width - 0.5
-    const relY = (e.clientY - rect.top) / rect.height - 0.5
-    const maxTilt = 6
+const handleArtMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const rect = e.currentTarget.getBoundingClientRect()
+  const relX = (e.clientX - rect.left) / rect.width - 0.5
+  const relY = (e.clientY - rect.top) / rect.height - 0.5
+  const maxTilt = 6
 
-    setArtTilt({
-      x: -relX * maxTilt,
-      y: relY * maxTilt,
-    })
-  }
+  setArtTilt({
+    x: -relX * maxTilt,
+    y: relY * maxTilt,
+  })
+}
 
   const handleArtMouseLeave = () => {
     setArtTilt({ x: 0, y: 0 })
@@ -737,7 +739,7 @@ function CountdownPill({
   }
 
   return (
-    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text-white">
+    <span className="px-2 py-1 rounded-full bg:white/15 border border-white/35 text-xs text-white">
       Mint ends in {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
       {mintState.seconds}s
     </span>
@@ -812,7 +814,6 @@ function ActionRow(props: {
 
   return (
     <div className="relative rounded-3xl border border-white/20 bg-[#6E6099] p-3 flex items-center gap-3 shadow-[0_0_18px_rgba(255,255,255,0.14)]">
-      {/* LEFT-SIDE BADGE */}
       {props.badge && (
         <div className="absolute -top-2 -left-1 origin-top-left -rotate-6">
           <div className="bg-[#C9FF5B] text-[#33264D] text-[0.6rem] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60">
