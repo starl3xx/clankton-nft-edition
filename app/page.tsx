@@ -277,7 +277,7 @@ export default function ClanktonMintPage() {
           {/* Right: edition + countdown + progress */}
           <div className="flex-1 flex flex-col justify-between h-32">
             <div className="space-y-2">
-              <div className="text-[11px] uppercase tracking-wide text-white/75">
+              <div className="text-xs md:text-sm uppercase tracking-wide text-white/75">
                 Edition of 50 • Base
               </div>
               <CountdownPill mintState={mintState} mintStartLabel="Dec 3" />
@@ -294,13 +294,13 @@ export default function ClanktonMintPage() {
         {/* Price card */}
         <div className="rounded-3xl bg-[#6E6099] border border-white/10 p-4 space-y-3 shadow-[0_0_22px_rgba(255,255,255,0.18)]">
           <div className="flex items-start justify-between">
-            <div className="text-sm text-white/80">Your price</div>
+            <div className="text-sm md:text-base text-white/80">Your price</div>
             <div className="text-right">
-              <div className="text-2xl font-mono-price">
+              <div className="text-2xl md:text-3xl font-mono-price">
                 {formatClankton(effectivePrice)}{" "}
-                <span className="text-sm tracking-wide">CLANKTON</span>
+                <span className="text-sm md:text-base tracking-wide">CLANKTON</span>
               </div>
-              <div className="text-[11px] text-white/70 mt-1">
+              <div className="text-xs md:text-sm text-white/70 mt-1">
                 Base price {formatClankton(BASE_PRICE)} − discounts{" "}
                 {formatClankton(localDiscount)}
               </div>
@@ -308,7 +308,7 @@ export default function ClanktonMintPage() {
           </div>
 
           <div className="mt-3">
-            <div className="flex flex-wrap gap-2 text-[11px]">
+            <div className="flex flex-wrap gap-2 text-xs md:text-sm">
               <DiscountPill
                 label="Cast"
                 value="-2,000,000"
@@ -339,7 +339,7 @@ export default function ClanktonMintPage() {
         </div>
 
         {/* Discounts header */}
-        <div className="text-[14px] text-white/90 tracking-wide text-center uppercase mt-1 mb-1 font-bold">
+        <div className="text-sm md:text-base text-white/90 tracking-wide text-center uppercase mt-1 mb-1 font-bold">
           ✨ Super easy mint discounts ✨
         </div>
 
@@ -402,7 +402,7 @@ export default function ClanktonMintPage() {
           />
 
           <button
-            className="w-full text-xs rounded-xl border border-white/30 bg-transparent px-3 py-2 hover:bg-white/5 transition disabled:opacity-60"
+            className="w-full text-sm md:text-base rounded-xl border border-white/30 bg-transparent px-3 py-2 hover:bg-white/5 transition disabled:opacity-60"
             onClick={refreshDiscountsFromServer}
             disabled={loading}
           >
@@ -413,7 +413,7 @@ export default function ClanktonMintPage() {
         {/* Mint + Buy buttons */}
         <div className="space-y-2">
           <button
-            className="w-full rounded-2xl bg-[#C9FF5B] text-black font-semibold px-4 py-3 text-center text-sm shadow-[0_0_30px_rgba(201,255,91,0.6)] hover:bg-[#D7FF86] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-2xl bg-[#C9FF5B] text-black font-semibold px-4 py-3 text-center text-sm md:text-base shadow-[0_0_30px_rgba(201,255,91,0.6)] hover:bg-[#D7FF86] transition disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading || isEnded || isNotStarted}
             onClick={handleMint}
           >
@@ -427,24 +427,24 @@ export default function ClanktonMintPage() {
           </button>
 
           <button
-            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg-white/10 transition"
+            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm md:text-base px-4 py-3 text-center hover:bg-white/10 transition"
             onClick={handleBuyClankton}
           >
             Buy CLANKTON
           </button>
         </div>
 
-        {/* How does this work? */}
+        {/* FAQ */}
         <div className="rounded-2xl border border-white/20 bg-[#6E6099] shadow-[0_0_18px_rgba(255,255,255,0.14)]">
           <button
-            className="w-full px-4 py-3 flex items-center justify-between text-xs text-white/85"
+            className="w-full px-4 py-3 flex items-center justify-between text-sm md:text-base text-white/85"
             onClick={() => setShowHow((v) => !v)}
           >
-            <span>How does this work?</span>
+            <span>Frequently Asked Questions</span>
             <span className="text-white/70">{showHow ? "−" : "+"}</span>
           </button>
           {showHow && (
-            <div className="px-4 pb-3 text-[11px] text-white/80 space-y-2">
+            <div className="px-4 pb-3 text-sm md:text-base text-white/80 space-y-2">
               <p>
                 • When the mint goes live, anyone can mint an NFT until all 50
                 editions are sold out. There is no whitelist or allowlist.
@@ -468,7 +468,7 @@ export default function ClanktonMintPage() {
         </div>
 
         {/* Footer: wallet + status */}
-        <div className="flex items-center justify-between text-[11px] text-white/80 pt-1">
+        <div className="flex items-center justify-between text-sm md:text-base text-white/80 pt-1">
           <div>
             {address ? (
               <>
@@ -485,7 +485,7 @@ export default function ClanktonMintPage() {
           )}
         </div>
 
-        <div className="text-[10px] text-white/70 text-right pb-2">
+        <div className="text-xs md:text-sm text-white/70 text-right pb-2">
           Discounts applied once per wallet. Payment in CLANKTON on Base.
         </div>
       </div>
@@ -501,7 +501,7 @@ export default function ClanktonMintPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              className="absolute -top-8 right-0 text-xs text-white/80 hover:text-white"
+              className="absolute -top-8 right-0 text-sm text-white/80 hover:text-white"
               onClick={() => setLightboxOpen(false)}
             >
               close ✕
@@ -558,7 +558,7 @@ function CountdownPill({
 }) {
   if (mintState.phase === "ended") {
     return (
-      <span className="px-2 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-500/40 text-[11px]">
+      <span className="px-2 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-500/40 text-xs md:text-sm">
         Mint ended
       </span>
     )
@@ -566,7 +566,7 @@ function CountdownPill({
 
   if (mintState.phase === "before") {
     return (
-      <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px] text-white">
+      <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs md:text-sm text-white">
         Mint begins {mintStartLabel} • in {mintState.days}d {mintState.hours}h{" "}
         {mintState.minutes}m {mintState.seconds}s
       </span>
@@ -574,7 +574,7 @@ function CountdownPill({
   }
 
   return (
-    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-[11px] text-white">
+    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs md:text-sm text-white">
       Mint ends in {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
       {mintState.seconds}s
     </span>
@@ -592,13 +592,13 @@ function EditionProgress({
 }) {
   return (
     <div className="mt-2 space-y-1">
-      <div className="flex items-center justify-between text-[11px] text-white/85">
+      <div className="flex items-center justify-between text-xs md:text-sm text-white/85">
         <span>
           {minted} / {maxSupply} minted
         </span>
         <span>{Math.round(pct)}%</span>
       </div>
-      <div className="h-1.5 rounded-full bg-white/20 overflow-hidden">
+      <div className="h-1.5 rounded-full bg.white/20 bg-white/20 overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-[#C9FF5B] to-[#F7FFB2]"
           style={{ width: `${pct}%` }}
@@ -619,7 +619,7 @@ function DiscountPill({
 }) {
   return (
     <div
-      className={`px-2 py-1 rounded-full border text-[11px] flex items-center gap-1 ${
+      className={`px-2 py-1 rounded-full border text-xs md:text-sm flex items-center gap-1 ${
         active
           ? "border-[#C9FF5B] bg-[#C9FF5B]/15 text-[#E8FFD0]"
           : "border-white/30 text-white/70"
@@ -627,7 +627,7 @@ function DiscountPill({
     >
       <span>{label}</span>
       <span>{value}</span>
-      {active && <span className="text-[9px]">• queued</span>}
+      {active && <span className="text-xs">• queued</span>}
     </div>
   )
 }
@@ -652,7 +652,7 @@ function ActionRow(props: {
       {/* LEFT-SIDE BADGE */}
       {props.badge && (
         <div className="absolute -top-2 -left-1 origin-top-left -rotate-6">
-          <div className="bg-[#C9FF5B] text-[#33264D] text-[9px] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60">
+          <div className="bg-[#C9FF5B] text-[#33264D] text-xs font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60">
             {props.badge}
           </div>
         </div>
@@ -665,17 +665,17 @@ function ActionRow(props: {
       )}
       <div className="flex-1">
         <div className="flex items-center gap-2">
-          <div className="text-sm font-medium">{props.title}</div>
+          <div className="text-sm md:text-base font-medium">{props.title}</div>
           {props.done && funLabel && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#C9FF5B]/25 text-[#E8FFD0] border border-[#C9FF5B]/50">
+            <span className="text-xs px-1.5 py-0.5 rounded-full bg-[#C9FF5B]/25 text-[#E8FFD0] border border-[#C9FF5B]/50">
               {funLabel}
             </span>
           )}
         </div>
-        <div className="text-xs text-white/80">{props.description}</div>
+        <div className="text-sm text-white/80">{props.description}</div>
       </div>
       <button
-        className="text-[11px] whitespace-nowrap rounded-xl bg-white text-[#33264D] px-3 py-2 font-semibold hover:bg-[#C9FF5B] transition disabled:opacity-60 disabled:cursor-not-allowed"
+        className="text-sm whitespace-nowrap rounded-xl bg-white text-[#33264D] px-3 py-2 font-semibold hover:bg-[#C9FF5B] transition disabled:opacity-60 disabled:cursor-not-allowed"
         onClick={props.onClick}
         disabled={props.done}
       >
