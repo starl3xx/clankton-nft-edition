@@ -112,18 +112,25 @@ useEffect(() => {
     setStatusMessage("Wallet connected (placeholder)")
   }
 
-const registerDiscountAction = async (_kind?: string) => {
-  if (!address) return
+const registerDiscountAction = async (
+  action:
+    | "cast"
+    | "tweet"
+    | "follow_tpc"
+    | "follow_star"
+    | "follow_channel",
+) => {
+  if (!address) return;
   try {
     await fetch("/api/register-discount-action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address, kind: _kind }),
-    })
+      body: JSON.stringify({ address, action }),
+    });
   } catch {
-    // ignore
+    // ignore – UI already optimistic
   }
-}
+};
 
 const handleOpenCastIntent = () => {
   const message =
@@ -139,7 +146,7 @@ const handleOpenCastIntent = () => {
 
   setDiscounts((p) => ({ ...p, casted: true }))
   setStatusMessage("Farcaster opened – don’t forget to cast!")
-  registerDiscountAction()
+  registerDiscountAction("cast")
 }
 
 const handleOpenTweetIntent = () => {
@@ -156,28 +163,28 @@ const handleOpenTweetIntent = () => {
 
   setDiscounts((p) => ({ ...p, tweeted: true }))
   setStatusMessage("𝕏 opened – don’t forget to tweet!")
-  registerDiscountAction()
+  registerDiscountAction("tweet")
 }
 
 const handleFollowTPC = () => {
   window.open("https://farcaster.xyz/thepapercrane", "_blank")
   setDiscounts((p) => ({ ...p, followTPC: true }))
   setStatusMessage("Opened @thepapercrane – plz follow!")
-  registerDiscountAction("followTPC")
+  registerDiscountAction("follow_tpc")
 }
 
 const handleFollowStar = () => {
   window.open("https://farcaster.xyz/starl3xx.eth", "_blank")
   setDiscounts((p) => ({ ...p, followStar: true }))
   setStatusMessage("Opened @starl3xx.eth – plz follow!")
-  registerDiscountAction("followStar")
+  registerDiscountAction("follow_star")
 }
 
 const handleFollowChannel = () => {
   window.open("https://farcaster.xyz/~/channel/clankton", "_blank")
   setDiscounts((p) => ({ ...p, followChannel: true }))
   setStatusMessage("Opened /clankton – plz follow!")
-  registerDiscountAction("followChannel")
+  registerDiscountAction("follow_channel")
 }
 
   const refreshDiscountsFromServer = async () => {
