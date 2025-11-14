@@ -111,7 +111,7 @@ export default function ClanktonMintPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   
   
-   const [isMiniApp, setIsMiniApp] = useState(false)
+  const [isMiniApp, setIsMiniApp] = useState(false)
 
   // Farcaster viewer fid (only available inside mini app)
   const [viewerFid, setViewerFid] = useState<number | null>(null)
@@ -127,21 +127,21 @@ export default function ClanktonMintPage() {
 
   // Mini app boot: tell shell we're ready, then pull viewer context
   // Hydration-safe: only runs on client, guarded by typeof window
-   useEffect(() => {
+  useEffect(() => {
     if (typeof window === "undefined") return
 
     let cancelled = false
 
     const init = async () => {
+      console.log("[init] starting init effect")
       try {
         await sdk.actions.ready()
         if (cancelled) return
 
         setIsMiniApp(true)
-        console.log("Mini app ready() OK")
+        console.log("[init] Mini app ready() OK")
 
         try {
-          // Cast to any so TS doesn't complain about `viewer`
           const rawCtx: any = await sdk.context
           if (cancelled) return
 
@@ -151,18 +151,18 @@ export default function ClanktonMintPage() {
               : null
 
           setViewerFid(fid)
-          console.log("Mini-app viewer FID:", fid)
+          console.log("[init] Mini-app viewer FID:", fid)
         } catch (e) {
           if (cancelled) return
           console.warn(
-            "sdk.context unavailable (dev preview or not in mini app)",
+            "[init] sdk.context unavailable (dev preview or not in mini app)",
             e,
           )
           setViewerFid(null)
         }
       } catch (err) {
         if (cancelled) return
-        console.error("Mini app boot failed", err)
+        console.error("[init] Mini app boot failed", err)
         setIsMiniApp(false)
         setViewerFid(null)
       }
@@ -174,7 +174,7 @@ export default function ClanktonMintPage() {
       cancelled = true
     }
   }, [])
-  
+
   // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
 
   type FollowsResponse = {
@@ -184,24 +184,34 @@ export default function ClanktonMintPage() {
   }
 
   useEffect(() => {
+    console.log(
+      "[follows-effect] run",
+      "isMiniApp=",
+      isMiniApp,
+      "viewerFid=",
+      viewerFid,
+      "bootstrappedFollows=",
+      bootstrappedFollows,
+    )
+
     // Only run inside the mini app, once we know the viewer fid
     if (!isMiniApp) {
-      // console.log("follows-effect: not mini app, skipping")
+      console.log("[follows-effect] not mini app, skipping")
       return
     }
     if (!viewerFid) {
-      // console.log("follows-effect: no viewerFid yet, skipping")
+      console.log("[follows-effect] no viewerFid yet, skipping")
       return
     }
     if (bootstrappedFollows) {
-      // console.log("follows-effect: already bootstrapped, skipping")
+      console.log("[follows-effect] already bootstrapped, skipping")
       return
     }
 
     const run = async () => {
       try {
         console.log(
-          "follows-effect: calling /api/farcaster/follows for fid",
+          "[follows-effect] calling /api/farcaster/follows for fid",
           viewerFid,
         )
 
@@ -209,7 +219,7 @@ export default function ClanktonMintPage() {
         if (!res.ok) {
           const text = await res.text().catch(() => "")
           console.error(
-            "follows-effect: non-OK response",
+            "[follows-effect] non-OK response",
             res.status,
             text,
           )
@@ -219,7 +229,7 @@ export default function ClanktonMintPage() {
         const data = (await res.json()) as FollowsResponse
         const { followTPC, followStar, followChannel } = data
 
-        console.log("follows-effect: received", data)
+        console.log("[follows-effect] received", data)
 
         // Merge into existing discounts; don't unset anything already true
         setDiscounts(prev => ({
@@ -231,12 +241,12 @@ export default function ClanktonMintPage() {
 
         setBootstrappedFollows(true)
       } catch (err) {
-        console.error("follows-effect: failed to bootstrap follows", err)
+        console.error("[follows-effect] failed to bootstrap follows", err)
       }
     }
 
     void run()
-  }, [isMiniApp, viewerFid, bootstrappedFollows, setDiscounts])
+  }, [isMiniApp, viewerFid, bootstrappedFollows])
   
   
   
