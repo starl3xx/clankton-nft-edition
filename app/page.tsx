@@ -66,6 +66,7 @@ type MintState = {
 //     { headers: { "api_key": process.env.NEYNAR_API_KEY! } }
 //   )
 //
+
 type FollowsResponse = {
   followTPC: boolean
   followStar: boolean
@@ -778,7 +779,7 @@ export default function ClanktonMintPage() {
   )
 }
 
-/* ----- helpers ---------------------------------------------------------- */
+/* ----- helpers ----------------------------------- */
 
 function computeMintState(): MintState {
   const now = Math.floor(Date.now() / 1000)
