@@ -67,13 +67,12 @@ const REACTION_LABELS = [
 export default function ClanktonMintPage() {
   // Wagmi: Farcaster wallet
   const { address, isConnected } = useAccount()
-  const { connect, connectors, status: connectStatus } = useConnect()
-
   const { data: clanktonBalanceData } = useBalance({
     address,
     token: CLANKTON_TOKEN_ADDRESS,
     query: { enabled: !!address },
   })
+  const { connect, connectors, status: connectStatus } = useConnect()
 
   const userAddress = address ?? null
 
@@ -180,45 +179,12 @@ export default function ClanktonMintPage() {
       }
     }
 
-    init()
+    void init()
 
     return () => {
       cancelled = true
     }
   }, [])
-
-  // Auto-connect Wagmi to the Farcaster mini-app wallet when running inside the mini app
-  useEffect(() => {
-    if (!isMiniApp) {
-      return
-    }
-    if (isConnected) {
-      return
-    }
-    // Don't spam connect calls while a connect is in-flight
-    if (connectStatus === "pending") {
-      return
-    }
-
-    const connector = connectors[0]
-    if (!connector) {
-      console.warn("[wagmi-autoconnect] no connector available")
-      return
-    }
-
-    console.log(
-      "[wagmi-autoconnect] attempting connect with",
-      connector.id,
-      connector.name,
-    )
-
-    // Fire and forget; errors are logged by wagmi
-    try {
-      connect({ connector })
-    } catch (err) {
-      console.error("[wagmi-autoconnect] connect error", err)
-    }
-  
 
   // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
 
@@ -294,6 +260,35 @@ export default function ClanktonMintPage() {
 
     void run()
   }, [isMiniApp, viewerFid, bootstrappedFollows])
+
+  // ---------- AUTOCONNECT FARCASTER WALLET VIA WAGMI ----------
+
+  useEffect(() => {
+    // Only try inside the mini app
+    if (!isMiniApp) return
+    // Don't reconnect if already connected
+    if (isConnected) return
+    // Avoid spamming connect calls
+    if (connectStatus === "pending") return
+
+    const connector = connectors[0]
+    if (!connector) {
+      console.warn("[wagmi-autoconnect] no connector available")
+      return
+    }
+
+    console.log(
+      "[wagmi-autoconnect] attempting connect with",
+      connector.id,
+      connector.name,
+    )
+
+    try {
+      connect({ connector })
+    } catch (err) {
+      console.error("[wagmi-autoconnect] connect error", err)
+    }
+  }, [isMiniApp, isConnected, connectors, connectStatus, connect])
 
   const isEnded = mintState.phase === "ended"
   const isNotStarted = mintState.phase === "before"
@@ -794,10 +789,7 @@ export default function ClanktonMintPage() {
                 <span className="font-mono">{shortAddress(address)}</span>
               </>
             ) : (
-              <span>
-                Farcaster wallet not connected (wagmi){" "}
-                {viewerFid && `· FID ${viewerFid}`}
-              </span>
+              <span>Farcaster wallet not connected</span>
             )}
           </div>
           {statusMessage && (
@@ -816,7 +808,7 @@ export default function ClanktonMintPage() {
       {/* Lightbox preview */}
       {lightboxOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 transition-opacity duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center bg:black/80 p-4 transition-opacity duration-200"
           onClick={() => setLightboxOpen(false)}
         >
           <div
@@ -900,7 +892,7 @@ function CountdownPill({
   }
 
   return (
-    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text-white">
+    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text:white">
       Mint ends in {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
       {mintState.seconds}s
     </span>
