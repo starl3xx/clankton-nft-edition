@@ -195,7 +195,8 @@ export default function ClanktonMintPage() {
     if (isConnected) {
       return
     }
-    if (connectStatus === "connecting" || connectStatus === "reconnecting") {
+    // Don't spam connect calls while a connect is in-flight
+    if (connectStatus === "pending") {
       return
     }
 
@@ -216,6 +217,7 @@ export default function ClanktonMintPage() {
       console.error("[wagmi-autoconnect] connect error", err)
     })
   }, [isMiniApp, isConnected, connectors, connectStatus, connect])
+  
 
   // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
 
