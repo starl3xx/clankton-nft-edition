@@ -1,9 +1,14 @@
-// lib/farcaster.ts
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY
 const NEYNAR_BASE_URL = "https://api.neynar.com"
 
 if (!NEYNAR_API_KEY) {
   throw new Error("Missing NEYNAR_API_KEY in environment")
+}
+
+// Make it explicit for TS
+const NEYNAR_HEADERS: Record<string, string> = {
+  "x-api-key": NEYNAR_API_KEY,
+  accept: "application/json",
 }
 
 type ViewerFollowStatus = {
@@ -19,11 +24,6 @@ export async function getViewerFollowStatus(
   const starFid = 6500
   const channelId = "clankton"
 
-  const headers = {
-    "x-api-key": NEYNAR_API_KEY,
-    accept: "application/json",
-  }
-
   const bulkUrl =
     `${NEYNAR_BASE_URL}/v2/farcaster/user/bulk` +
     `?fids=${tpcFid},${starFid}&viewer_fid=${viewerFid}`
@@ -33,8 +33,8 @@ export async function getViewerFollowStatus(
     `?channel_id=${channelId}&fid=${viewerFid}`
 
   const [bulkRes, channelRes] = await Promise.all([
-    fetch(bulkUrl, { headers }),
-    fetch(channelUrl, { headers }),
+    fetch(bulkUrl, { headers: NEYNAR_HEADERS }),
+    fetch(channelUrl, { headers: NEYNAR_HEADERS }),
   ])
 
   if (!bulkRes.ok) {
