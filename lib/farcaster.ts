@@ -1,140 +1,101 @@
 // lib/farcaster.ts
 import "server-only"
 
-const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY
-const NEYNAR_BASE = "https://api.neynar.com/v2/farcaster"
+const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY!
+const TPC_FID = 249958
+const STAR_FID = 6500
+const CHANNEL_ID = "clankton"
 
-// Hard-coded IDs we care about
-export const PAPERCRANE_FID = 249958
-export const STARL3XX_FID = 6500
-export const CLANKTON_CHANNEL_ID = "clankton"
-
-if (!NEYNAR_API_KEY) {
-  // Fail fast on the server if the key is missing
-  console.error("[farcaster] Missing NEYNAR_API_KEY env var")
-}
-
-type NeynarBulkUser = {
-  fid: number
-  username: string
-  viewer_context?: {
-    following?: boolean
-    followed_by?: boolean
-    blocking?: boolean
-    blocked_by?: boolean
-  }
-}
-
-type NeynarBulkResponse = {
-  users: NeynarBulkUser[]
-}
-
-type NeynarChannelUserResponse = {
-  is_following?: boolean
-  result?: {
-    is_following?: boolean
-  }
-}
-
-// Simple structured log helper
-function log(level: "info" | "error", msg: string, extra?: Record<string, unknown>) {
-  const payload = { level, msg, ...extra }
-  // Keep it JSON so you can grep/log drain
-  console[level === "error" ? "error" : "log"](JSON.stringify(payload))
-}
-
-// Generic Neynar fetch with basic caching
-async function neynarFetch<T>(
-  path: string,
-  searchParams: Record<string, string | number>,
-): Promise<T> {
-  const qs = new URLSearchParams()
-  for (const [k, v] of Object.entries(searchParams)) {
-    qs.set(k, String(v))
-  }
-
-  const url = `${NEYNAR_BASE}/${path}?${qs.toString()}`
-  log("info", "[farcaster] neynarFetch", { url })
-
-  const res = await fetch(url, {
-    headers: {
-      "x-api-key": NEYNAR_API_KEY ?? "",
-    },
-    // Cache per URL for 60s on the server
-    next: { revalidate: 60 },
-  })
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "")
-    log("error", "[farcaster] Neynar error", {
-      url,
-      status: res.status,
-      body,
-    })
-    throw new Error(`Neynar ${path} failed with ${res.status}`)
-  }
-
-  return (await res.json()) as T
-}
-
-/**
- * For a given viewer fid, return whether they:
- *  - follow @thepapercrane
- *  - follow @starl3xx
- *  - follow /clankton channel
- */
 export async function getViewerFollowStatus(viewerFid: number) {
-  if (!viewerFid || Number.isNaN(viewerFid)) {
-    throw new Error("Invalid viewerFid passed to getViewerFollowStatus")
+  if (!NEYNAR_API_KEY) {
+    throw new Error("Missing NEYNAR_API_KEY")
   }
 
-  // 1) Bulk user for TPC + Star, with viewer_fid context
-  const bulk = await neynarFetch<NeynarBulkResponse>("user/bulk", {
-    fids: `${PAPERCRANE_FID},${STARL3XX_FID}`,
-    viewer_fid: viewerFid,
-  })
+  // ---- 1) Check if viewer follows @thepapercrane ----
+  const followTPC = await checkUserFollows(viewerFid, TPC_FID)
 
-  const tpc = bulk.users.find((u) => u.fid === PAPERCRANE_FID)
-  const star = bulk.users.find((u) => u.fid === STARL3XX_FID)
+  // ---- 2) Check if viewer follows @starl3xx ----
+  const followStar = await checkUserFollows(viewerFid, STAR_FID)
 
-  const followTPC = !!tpc?.viewer_context?.following
-  const followStar = !!star?.viewer_context?.following
-
-  // 2) Channel follows for /clankton
-  const channel = await neynarFetch<NeynarChannelUserResponse>("channel/user", {
-    fid: viewerFid,
-    channel_id: CLANKTON_CHANNEL_ID,
-  })
-
-  const followChannel =
-    !!channel.is_following || !!channel.result?.is_following
-
-  log("info", "[farcaster] getViewerFollowStatus result", {
-    viewerFid,
-    followTPC,
-    followStar,
-    followChannel,
-  })
+  // ---- 3) Check if viewer is a member/follower of /clankton ----
+  const followChannel = await checkChannelMembership(viewerFid, CHANNEL_ID)
 
   return { followTPC, followStar, followChannel }
 }
 
-/**
- * Generic bulk follow status for arbitrary fids
- * Used by optional POST /follow-status batch endpoint
- */
-export async function getBulkFollowStatus(
-  viewerFid: number,
-  targetFids: number[],
-) {
-  const bulk = await neynarFetch<NeynarBulkResponse>("user/bulk", {
-    fids: targetFids.join(","),
-    viewer_fid: viewerFid,
-  })
+/* ---------------------------------------------
+   USER FOLLOW CHECK
+------------------------------------------------ */
+async function checkUserFollows(viewerFid: number, targetFid: number) {
+  const url =
+    `https://api.neynar.com/v2/farcaster/user/following` +
+    `?fid=${viewerFid}&target_fid=${targetFid}`
 
-  return bulk.users.map((u) => ({
-    fid: u.fid,
-    following: !!u.viewer_context?.following,
-    followed_by: !!u.viewer_context?.followed_by,
-  }))
+  try {
+    const res = await fetch(url, {
+      headers: { "x-api-key": NEYNAR_API_KEY },
+      cache: "no-store",
+    })
+
+    if (!res.ok) {
+      console.error("[farcaster] follow user error", res.status, await safeText(res))
+      return false
+    }
+
+    const json = await res.json()
+    // Neynar uses: { result: { following: boolean } }
+    return json?.result?.following === true
+  } catch (err) {
+    console.error("[farcaster] follow user catch", err)
+    return false
+  }
+}
+
+/* ---------------------------------------------
+   CHANNEL MEMBERSHIP CHECK
+------------------------------------------------ */
+async function checkChannelMembership(viewerFid: number, channelId: string) {
+  const url =
+    `https://api.neynar.com/v2/farcaster/channel/user` +
+    `?id=${channelId}&fid=${viewerFid}`
+
+  try {
+    const res = await fetch(url, {
+      headers: { "x-api-key": NEYNAR_API_KEY },
+      cache: "no-store",
+    })
+
+    if (!res.ok) {
+      console.error("[farcaster] channel error", res.status, await safeText(res))
+      return false
+    }
+
+    const json = await res.json()
+
+    console.log("[farcaster] channel raw json:", JSON.stringify(json))
+
+    // Support BOTH shapes Neynar uses:
+    //
+    // 1. { result: { is_member: true, is_follower: true } }
+    // 2. { is_member: true } (older beta)
+    //
+    return (
+      json?.result?.is_member === true ||
+      json?.result?.is_follower === true ||
+      json?.is_member === true ||
+      json?.is_follower === true
+    )
+  } catch (err) {
+    console.error("[farcaster] channel catch", err)
+    return false
+  }
+}
+
+/* Utility to safely extract text */
+async function safeText(res: Response) {
+  try {
+    return await res.text()
+  } catch {
+    return ""
+  }
 }

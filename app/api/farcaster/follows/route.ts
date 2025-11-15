@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   if (!fidParam || Number.isNaN(viewerFid)) {
     return NextResponse.json(
       { error: "Missing or invalid fid" },
-      { status: 400 },
+      { status: 400 }
     )
   }
 
@@ -25,12 +25,12 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error(
       "[api/farcaster/follows] error",
-      JSON.stringify({ viewerFid, err }, null, 2),
+      JSON.stringify({ viewerFid, err }, null, 2)
     )
 
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 },
+      { status: 500 }
     )
   }
 }
