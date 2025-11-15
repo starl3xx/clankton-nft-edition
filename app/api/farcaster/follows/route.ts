@@ -27,81 +27,106 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  try {
-    const headers = {
-      "api-key": NEYNAR_API_KEY,
-    }
+  const headers = {
+    "api_key": NEYNAR_API_KEY,
+    "content-type": "application/json",
+  }
 
-    // ---- 1) User → user follow relationships via /user/bulk ----
-    const bulkUrl = new URL(
-      "https://api.neynar.com/v2/farcaster/user/bulk",
-    )
-    // We care about TPC + STARL3XX
-    bulkUrl.searchParams.set(
-      "fids",
-      [PAPERCRANE_FID, STARL3XX_FID].join(","),
-    )
-    bulkUrl.searchParams.set("viewer_fid", String(viewerFid))
+  async function fetchUserFollow(targetFid: number): Promise<boolean> {
+    const url = new URL("https://api.neynar.com/v2/farcaster/user")
+    url.searchParams.set("fid", String(targetFid))
+    url.searchParams.set("viewer_fid", String(viewerFid))
 
-    const bulkRes = await fetch(bulkUrl.toString(), {
+    const res = await fetch(url.toString(), {
       headers,
       cache: "no-store",
     })
 
-    if (!bulkRes.ok) {
-      const text = await bulkRes.text().catch(() => "")
-      console.error("Neynar user/bulk error", bulkRes.status, text)
-      throw new Error("Failed to fetch user relationships")
+    if (!res.ok) {
+      const text = await res.text().catch(() => "")
+      console.error(
+        "Neynar /user error",
+        res.status,
+        text,
+        "for targetFid",
+        targetFid,
+        "viewerFid",
+        viewerFid,
+      )
+      return false
     }
 
-    const bulkJson: any = await bulkRes.json()
-    const users: any[] = bulkJson.users ?? bulkJson.result?.users ?? []
+    const json: any = await res.json()
 
-    const findUser = (fid: number) =>
-      users.find((u) => Number(u.fid ?? u.user?.fid) === fid) ?? null
+    // Neynar can return either `viewer_context` at top-level or under `result`
+    const viewerCtx =
+      json.viewer_context ??
+      json.result?.viewer_context ??
+      json.user?.viewer_context
 
-    const tpcUser = findUser(PAPERCRANE_FID)
-    const starUser = findUser(STARL3XX_FID)
-
-    const followTPC = !!(
-      tpcUser?.viewer_context?.following ??
-      tpcUser?.user?.viewer_context?.following
+    const following = !!viewerCtx?.following
+    console.log(
+      "Neynar /user follow check",
+      "targetFid=",
+      targetFid,
+      "viewerFid=",
+      viewerFid,
+      "following=",
+      following,
     )
 
-    // If the viewer *is* STARL3XX, treat as following themselves
-    const followStar =
-      viewerFid === STARL3XX_FID ||
-      !!(
-        starUser?.viewer_context?.following ??
-        starUser?.user?.viewer_context?.following
+    return following
+  }
+
+  async function fetchChannelFollow(): Promise<boolean> {
+    const url = new URL(
+      "https://api.neynar.com/v2/farcaster/channel/user",
+    )
+    url.searchParams.set("fid", String(viewerFid))
+    url.searchParams.set("channel_id", CLANKTON_CHANNEL_ID)
+
+    const res = await fetch(url.toString(), {
+      headers,
+      cache: "no-store",
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "")
+      console.error(
+        "Neynar /channel/user error",
+        res.status,
+        text,
+        "viewerFid",
+        viewerFid,
       )
-
-    // ---- 2) Channel → is viewer following /clankton? ----
-    let followChannel = false
-
-    try {
-      const channelRes = await fetch(
-        `https://api.neynar.com/v2/farcaster/channel/user?fid=${viewerFid}&channel_id=${CLANKTON_CHANNEL_ID}`,
-        { headers, cache: "no-store" },
-      )
-
-      if (channelRes.ok) {
-        const channelJson: any = await channelRes.json()
-        followChannel =
-          !!channelJson.is_following ||
-          !!channelJson.result?.is_following ||
-          !!channelJson.result?.channel?.following
-      } else {
-        const text = await channelRes.text().catch(() => "")
-        console.error(
-          "Neynar channel/user error",
-          channelRes.status,
-          text,
-        )
-      }
-    } catch (e) {
-      console.error("Neynar channel/user exception", e)
+      return false
     }
+
+    const json: any = await res.json()
+
+    // Cover the common shapes
+    const followChannel =
+      !!json.is_following ||
+      !!json.result?.is_following ||
+      !!json.result?.channel?.following
+
+    console.log(
+      "Neynar /channel/user follow check",
+      "viewerFid=",
+      viewerFid,
+      "followChannel=",
+      followChannel,
+    )
+
+    return followChannel
+  }
+
+  try {
+    const [followTPC, followStar, followChannel] = await Promise.all([
+      fetchUserFollow(PAPERCRANE_FID),
+      fetchUserFollow(STARL3XX_FID),
+      fetchChannelFollow(),
+    ])
 
     return NextResponse.json({
       followTPC,
