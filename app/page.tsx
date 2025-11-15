@@ -50,6 +50,19 @@ type MintState = {
   seconds: number
 }
 
+type FollowsResponse = {
+  followTPC: boolean
+  followStar: boolean
+  followChannel: boolean
+}
+
+type DiscountAction =
+  | "cast"
+  | "tweet"
+  | "follow_tpc"
+  | "follow_star"
+  | "follow_channel"
+
 const REACTION_LABELS = [
   "Nice 😏",
   "I see you 🥲",
@@ -113,6 +126,8 @@ export default function ClanktonMintPage() {
   })
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
+  const [checkingFollows, setCheckingFollows] = useState(false)
+
   const [isMiniApp, setIsMiniApp] = useState(false)
 
   // Farcaster viewer fid (only available inside mini app)
@@ -128,7 +143,6 @@ export default function ClanktonMintPage() {
   }, [])
 
   // Mini app boot: tell shell we're ready, then pull viewer context
-  // Hydration-safe: only runs on client, guarded by typeof window
   useEffect(() => {
     if (typeof window === "undefined") return
 
@@ -154,10 +168,8 @@ export default function ClanktonMintPage() {
           if (typeof rawCtx?.viewer?.fid === "number") {
             fid = rawCtx.viewer.fid
           } else if (typeof rawCtx?.user?.fid === "number") {
-            // some hosts expose `user` instead of `viewer`
             fid = rawCtx.user.fid
           } else if (typeof rawCtx?.cast?.author?.fid === "number") {
-            // sometimes only the cast author is present
             fid = rawCtx.cast.author.fid
           }
 
@@ -186,13 +198,39 @@ export default function ClanktonMintPage() {
     }
   }, [])
 
-  // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
+  // ---- DISCOUNT SECTION: write a discount action to DB ----
 
-  type FollowsResponse = {
-    followTPC: boolean
-    followStar: boolean
-    followChannel: boolean
+  const registerDiscountAction = async (
+    addr: string | null | undefined,
+    action: DiscountAction,
+  ) => {
+    if (!addr) {
+      console.warn("registerDiscountAction: missing address, skipping", {
+        action,
+      })
+      return
+    }
+
+    try {
+      const res = await fetch("/api/register-discount-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: addr, action }),
+      })
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "")
+        console.error("register-discount-action: non-OK response", {
+          status: res.status,
+          body: text,
+        })
+      }
+    } catch (err) {
+      console.error("register-discount-action failed", err)
+    }
   }
+
+  // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
 
   useEffect(() => {
     console.log(
@@ -203,9 +241,10 @@ export default function ClanktonMintPage() {
       viewerFid,
       "bootstrappedFollows=",
       bootstrappedFollows,
+      "userAddress=",
+      userAddress,
     )
 
-    // Only run inside the mini app, once we know the viewer fid
     if (!isMiniApp) {
       console.log("[follows-effect] not mini app, skipping")
       return
@@ -220,6 +259,7 @@ export default function ClanktonMintPage() {
     }
 
     const run = async () => {
+      setCheckingFollows(true)
       try {
         console.log(
           "[follows-effect] calling /api/farcaster/follows for fid",
@@ -242,24 +282,44 @@ export default function ClanktonMintPage() {
 
         console.log("[follows-effect] received", data)
 
-        // Merge into existing discounts; don't unset anything already true
-        setDiscounts((prev) => ({
+        const prev = discounts
+
+        const next: DiscountFlags = {
           ...prev,
           followTPC: prev.followTPC || followTPC,
           followStar: prev.followStar || followStar,
           followChannel: prev.followChannel || followChannel,
-        }))
+        }
 
-        // SUCCESS → mark bootstrapped so we don't refetch
+        // Write to DB for flags that flipped false → true
+        if (userAddress) {
+          if (!prev.followTPC && next.followTPC) {
+            void registerDiscountAction(userAddress, "follow_tpc")
+          }
+          if (!prev.followStar && next.followStar) {
+            void registerDiscountAction(userAddress, "follow_star")
+          }
+          if (!prev.followChannel && next.followChannel) {
+            void registerDiscountAction(userAddress, "follow_channel")
+          }
+        } else {
+          console.log(
+            "[follows-effect] no userAddress yet; DB will reflect follows only after wallet connects",
+          )
+        }
+
+        setDiscounts(next)
         setBootstrappedFollows(true)
       } catch (err) {
         console.error("[follows-effect] failed to bootstrap follows", err)
-        // note: DO NOT set bootstrappedFollows here; we want to retry later
+        // do not set bootstrappedFollows so we can retry
+      } finally {
+        setCheckingFollows(false)
       }
     }
 
     void run()
-  }, [isMiniApp, viewerFid, bootstrappedFollows])
+  }, [isMiniApp, viewerFid, bootstrappedFollows, discounts, userAddress])
 
   // ---------- AUTOCONNECT FARCASTER WALLET VIA WAGMI ----------
 
@@ -307,45 +367,6 @@ export default function ClanktonMintPage() {
   const effectivePrice = remotePrice ?? localPrice
   const progressPct = Math.min(100, (minted / MAX_SUPPLY) * 100)
 
-  // ---- DISCOUNT SECTION ----------------------------------------------------
-
-  type DiscountAction =
-    | "cast"
-    | "tweet"
-    | "follow_tpc"
-    | "follow_star"
-    | "follow_channel"
-
-  const registerDiscountAction = async (
-    addr: string | null | undefined,
-    action: DiscountAction,
-  ) => {
-    if (!addr) {
-      console.warn("registerDiscountAction: missing address, skipping", {
-        action,
-      })
-      return
-    }
-
-    try {
-      const res = await fetch("/api/register-discount-action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: addr, action }),
-      })
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "")
-        console.error("register-discount-action: non-OK response", {
-          status: res.status,
-          body: text,
-        })
-      }
-    } catch (err) {
-      console.error("register-discount-action failed", err)
-    }
-  }
-
   const handleOpenCastIntent = async () => {
     const text =
       "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
@@ -387,7 +408,7 @@ export default function ClanktonMintPage() {
 
     setDiscounts((p) => ({ ...p, tweeted: true }))
     setStatusMessage("X opened – don’t forget to tweet!")
-    registerDiscountAction(userAddress, "tweet")
+    void registerDiscountAction(userAddress, "tweet")
   }
 
   const handleFollowTPC = () => {
@@ -408,7 +429,7 @@ export default function ClanktonMintPage() {
 
     setDiscounts((p) => ({ ...p, followTPC: true }))
     setStatusMessage("Opened @thepapercrane – plz follow!")
-    registerDiscountAction(userAddress, "follow_tpc")
+    void registerDiscountAction(userAddress, "follow_tpc")
   }
 
   const handleFollowStar = () => {
@@ -429,7 +450,7 @@ export default function ClanktonMintPage() {
 
     setDiscounts((p) => ({ ...p, followStar: true }))
     setStatusMessage("Opened @starl3xx.eth – plz follow!")
-    registerDiscountAction(userAddress, "follow_star")
+    void registerDiscountAction(userAddress, "follow_star")
   }
 
   const handleFollowChannel = async () => {
@@ -444,7 +465,7 @@ export default function ClanktonMintPage() {
 
       setDiscounts((p) => ({ ...p, followChannel: true }))
       setStatusMessage("Opened /clankton – plz join!")
-      registerDiscountAction(userAddress, "follow_channel")
+      void registerDiscountAction(userAddress, "follow_channel")
     } catch (err) {
       console.error("open /clankton channel failed", err)
       setStatusMessage("Couldn’t open /clankton, try again")
@@ -647,8 +668,14 @@ export default function ClanktonMintPage() {
 
         {/* Discounts header */}
         <div className="text-base text-white/90 tracking-wide text-center uppercase mt-1 mb-1 font-bold">
-          ✨ Super simple mint discounts ✨
+          ✨ Super simple discounts ✨
         </div>
+
+        {checkingFollows && (
+          <div className="text-xs text-white/70 text-center mb-1">
+            Checking your Farcaster follows… 🔎
+          </div>
+        )}
 
         {/* Actions */}
         <div className="space-y-3">
@@ -808,7 +835,7 @@ export default function ClanktonMintPage() {
       {/* Lightbox preview */}
       {lightboxOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg:black/80 p-4 transition-opacity duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 transition-opacity duration-200"
           onClick={() => setLightboxOpen(false)}
         >
           <div
@@ -892,7 +919,7 @@ function CountdownPill({
   }
 
   return (
-    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text:white">
+    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text-white">
       Mint ends in {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
       {mintState.seconds}s
     </span>
