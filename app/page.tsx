@@ -50,7 +50,6 @@ type MintState = {
   seconds: number
 }
 
-
 const REACTION_LABELS = [
   "Nice 😏",
   "I see you 🥲",
@@ -66,12 +65,19 @@ const REACTION_LABELS = [
 ]
 
 export default function ClanktonMintPage() {
-  // Wagmi: Farcaster wallet
+  // Wagmi: Farcaster wallet (handled by Farcaster connector in providers.tsx)
   const { address, isConnected } = useAccount()
+
+  // Debug: see what wagmi thinks the account state is
+  useEffect(() => {
+    console.log("[wagmi] account state", { address, isConnected })
+  }, [address, isConnected])
+
   const { data: clanktonBalanceData } = useBalance({
     address,
     token: CLANKTON_TOKEN_ADDRESS,
-    query: { enabled: !!address },
+    // Only try to fetch balance if wagmi thinks we’re connected
+    query: { enabled: !!address && isConnected },
   })
 
   const userAddress = address ?? null
@@ -109,8 +115,7 @@ export default function ClanktonMintPage() {
   const [showHow, setShowHow] = useState(false)
   const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [lightboxOpen, setLightboxOpen] = useState(false)
-  
-  
+
   const [isMiniApp, setIsMiniApp] = useState(false)
 
   // Farcaster viewer fid (only available inside mini app)
@@ -257,9 +262,8 @@ export default function ClanktonMintPage() {
     }
 
     void run()
-  }, [isMiniApp, viewerFid, bootstrappedFollows])  
-  
-  
+  }, [isMiniApp, viewerFid, bootstrappedFollows])
+
   const isEnded = mintState.phase === "ended"
   const isNotStarted = mintState.phase === "before"
 
@@ -315,8 +319,6 @@ export default function ClanktonMintPage() {
       console.error("register-discount-action failed", err)
     }
   }
-
-
 
   const handleOpenCastIntent = async () => {
     const text =
@@ -757,6 +759,12 @@ export default function ClanktonMintPage() {
               <>
                 Farcaster wallet:{" "}
                 <span className="font-mono">{shortAddress(address)}</span>
+              </>
+            ) : isMiniApp && viewerFid ? (
+              <>
+                Farcaster wallet not connected in wagmi
+                {" · "}
+                <span className="font-mono">FID {viewerFid}</span>
               </>
             ) : (
               <span>Farcaster wallet not connected</span>
