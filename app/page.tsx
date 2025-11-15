@@ -213,10 +213,11 @@ export default function ClanktonMintPage() {
     )
 
     // Fire and forget; errors are logged by wagmi
-    connect({ connector }).catch((err) => {
+    try {
+      connect({ connector })
+    } catch (err) {
       console.error("[wagmi-autoconnect] connect error", err)
-    })
-  }, [isMiniApp, isConnected, connectors, connectStatus, connect])
+    }
   
 
   // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
