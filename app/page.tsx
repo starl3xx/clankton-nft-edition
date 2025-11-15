@@ -8,7 +8,7 @@ import {
 } from "react"
 import type React from "react"
 import Image from "next/image"
-import { useAccount, useBalance } from "wagmi"
+import { useAccount, useBalance, useConnect } from "wagmi"
 import { sdk } from "@farcaster/miniapp-sdk"
 
 const BASE_PRICE = 20_000_000
@@ -65,19 +65,14 @@ const REACTION_LABELS = [
 ]
 
 export default function ClanktonMintPage() {
-  // Wagmi: Farcaster wallet (handled by Farcaster connector in providers.tsx)
+  // Wagmi: Farcaster wallet
   const { address, isConnected } = useAccount()
-
-  // Debug: see what wagmi thinks the account state is
-  useEffect(() => {
-    console.log("[wagmi] account state", { address, isConnected })
-  }, [address, isConnected])
+  const { connect, connectors, status: connectStatus } = useConnect()
 
   const { data: clanktonBalanceData } = useBalance({
     address,
     token: CLANKTON_TOKEN_ADDRESS,
-    // Only try to fetch balance if wagmi thinks we’re connected
-    query: { enabled: !!address && isConnected },
+    query: { enabled: !!address },
   })
 
   const userAddress = address ?? null
@@ -113,7 +108,10 @@ export default function ClanktonMintPage() {
   })
   const [minted] = useState(0)
   const [showHow, setShowHow] = useState(false)
-  const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  })
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
   const [isMiniApp, setIsMiniApp] = useState(false)
@@ -188,6 +186,36 @@ export default function ClanktonMintPage() {
       cancelled = true
     }
   }, [])
+
+  // Auto-connect Wagmi to the Farcaster mini-app wallet when running inside the mini app
+  useEffect(() => {
+    if (!isMiniApp) {
+      return
+    }
+    if (isConnected) {
+      return
+    }
+    if (connectStatus === "connecting" || connectStatus === "reconnecting") {
+      return
+    }
+
+    const connector = connectors[0]
+    if (!connector) {
+      console.warn("[wagmi-autoconnect] no connector available")
+      return
+    }
+
+    console.log(
+      "[wagmi-autoconnect] attempting connect with",
+      connector.id,
+      connector.name,
+    )
+
+    // Fire and forget; errors are logged by wagmi
+    connect({ connector }).catch((err) => {
+      console.error("[wagmi-autoconnect] connect error", err)
+    })
+  }, [isMiniApp, isConnected, connectors, connectStatus, connect])
 
   // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
 
@@ -687,7 +715,9 @@ export default function ClanktonMintPage() {
             onClick={refreshDiscountsFromServer}
             disabled={loading}
           >
-            {loading ? "Refreshing…" : "🔄 Refresh my discounts! (verifies on server)"}
+            {loading
+              ? "Refreshing…"
+              : "🔄 Refresh my discounts! (verifies on server)"}
           </button>
         </div>
 
@@ -760,14 +790,11 @@ export default function ClanktonMintPage() {
                 Farcaster wallet:{" "}
                 <span className="font-mono">{shortAddress(address)}</span>
               </>
-            ) : isMiniApp && viewerFid ? (
-              <>
-                Farcaster wallet not connected in wagmi
-                {" · "}
-                <span className="font-mono">FID {viewerFid}</span>
-              </>
             ) : (
-              <span>Farcaster wallet not connected</span>
+              <span>
+                Farcaster wallet not connected (wagmi){" "}
+                {viewerFid && `· FID ${viewerFid}`}
+              </span>
             )}
           </div>
           {statusMessage && (
