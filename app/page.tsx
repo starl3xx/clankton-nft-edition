@@ -58,12 +58,12 @@ const REACTION_LABELS = [
   "I see you 🥲",
   "Aww, thanks!",
   "Oh yeah!",
-  "🐐",
-  "Go off!",
-  "Crushing",
-  "Easy, huh?",
-  "LFG!!",
-  "🫡",
+  "&nbsp;🐐&nbsp;",
+  "🥹🥹",
+  "Woohoo!",
+  "Yeehaw!",
+  "LFG!",
+  "High five!",
   "Chad",
 ]
 
@@ -704,7 +704,7 @@ export default function ClanktonMintPage() {
                 verified={discountVerified.tweeted}
               />
               <DiscountPill
-                label="@thepapercrane"
+                label="@papercrane"
                 value="-500K"
                 queued={discounts.followTPC && !discountVerified.followTPC}
                 verified={discountVerified.followTPC}
@@ -796,16 +796,16 @@ export default function ClanktonMintPage() {
             done={discounts.followChannel}
           />
 
-          <button
-            className="w-full text-xs rounded-xl border border-white/30 bg-transparent px-3 py-2 hover:bg-white/5 transition disabled:opacity-60"
-            onClick={refreshDiscountsFromServer}
-            disabled={loading}
-          >
-            {loading
-              ? "Refreshing…"
-              : "🔄 Refresh my discounts! (verifies on server)"}
-          </button>
-        </div>
+     <button
+       className="w-full text-xs rounded-xl border border-white/35      bg-white/15 px-3 py-2 text-white hover:bg-white/20 transition disabled:opacity-60"
+       onClick={refreshDiscountsFromServer}
+       disabled={loading}
+     >
+       {loading
+         ? "Refreshing…"
+         : "🔄 Refresh my discounts! (verifies on server)"}
+     </button>
+     </div>
 
         {/* Mint + Buy buttons */}
         <div className="space-y-2">
@@ -823,12 +823,12 @@ export default function ClanktonMintPage() {
               : "Mint with CLANKTON"}
           </button>
 
-          <button
-            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg-white/10 transition"
-            onClick={handleBuyClankton}
-          >
-            {buyClanktonLabel}
-          </button>
+     <button
+  className="w-full rounded-2xl border border-white/35 bg-white/15 text-sm px-4 py-3 text-center text-white hover:bg-white/20 transition"
+  onClick={handleBuyClankton}
+     >
+       {buyClanktonLabel}
+     </button>
         </div>
 
         {/* FAQ */}
