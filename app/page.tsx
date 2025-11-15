@@ -316,51 +316,6 @@ export default function ClanktonMintPage() {
     }
   }
 
-  // Auto-apply follow discounts once we know viewer fid (mini app only)
-  // and can fetch from /api/farcaster/follows?fid=X (which talks to Neynar)
-
-useEffect(() => {
-  if (!isMiniApp) return
-  if (!viewerFid) return
-  if (bootstrappedFollows) return
-
-  console.log("[follows-effect] run – isMiniApp=", isMiniApp,
-              "– viewerFid=", viewerFid,
-              "– bootstrappedFollows=", bootstrappedFollows)
-
-  const run = async () => {
-    try {
-      console.log("[follows-effect] calling /api/farcaster/follows for fid", viewerFid)
-
-      const res = await fetch(`/api/farcaster/follows?fid=${viewerFid}`)
-      if (!res.ok) {
-        throw new Error("Failed to fetch follow data")
-      }
-
-      const data = await res.json()
-      console.log("[follows-effect] API result:", data)
-
-      const { followTPC, followStar, followChannel } = data
-
-      setDiscounts((prev) => ({
-        ...prev,
-        followTPC: prev.followTPC || followTPC,
-        followStar: prev.followStar || followStar,
-        followChannel: prev.followChannel || followChannel,
-      }))
-
-      // SUCCESS → mark bootstrapped
-      setBootstrappedFollows(true)
-
-    } catch (err) {
-      console.error("[follows-effect] bootstrap error:", err)
-      // do NOT setBootstrappedFollows(true)
-    }
-  }
-
-  run()
-}, [isMiniApp, viewerFid, bootstrappedFollows])
-
 
 
   const handleOpenCastIntent = async () => {
