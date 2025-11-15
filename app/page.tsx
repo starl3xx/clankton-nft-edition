@@ -241,22 +241,23 @@ export default function ClanktonMintPage() {
         console.log("[follows-effect] received", data)
 
         // Merge into existing discounts; don't unset anything already true
-        setDiscounts(prev => ({
+        setDiscounts((prev) => ({
           ...prev,
           followTPC: prev.followTPC || followTPC,
           followStar: prev.followStar || followStar,
           followChannel: prev.followChannel || followChannel,
         }))
 
+        // SUCCESS → mark bootstrapped so we don't refetch
         setBootstrappedFollows(true)
       } catch (err) {
         console.error("[follows-effect] failed to bootstrap follows", err)
+        // note: DO NOT set bootstrappedFollows here; we want to retry later
       }
     }
 
     void run()
-  }, [isMiniApp, viewerFid, bootstrappedFollows])
-  
+  }, [isMiniApp, viewerFid, bootstrappedFollows])  
   
   
   const isEnded = mintState.phase === "ended"
@@ -317,54 +318,50 @@ export default function ClanktonMintPage() {
 
   // Auto-apply follow discounts once we know viewer fid (mini app only)
   // and can fetch from /api/farcaster/follows?fid=X (which talks to Neynar)
-  useEffect(() => {
-    if (!isMiniApp) return
-    if (!viewerFid) return
-    if (bootstrappedFollows) return
 
-    const run = async () => {
-      try {
-        const res = await fetch(`/api/farcaster/follows?fid=${viewerFid}`)
-        if (!res.ok) throw new Error("Failed to fetch follow data")
-        const data = (await res.json()) as FollowsResponse
+useEffect(() => {
+  if (!isMiniApp) return
+  if (!viewerFid) return
+  if (bootstrappedFollows) return
 
-        const { followTPC, followStar, followChannel } = data
+  console.log("[follows-effect] run – isMiniApp=", isMiniApp,
+              "– viewerFid=", viewerFid,
+              "– bootstrappedFollows=", bootstrappedFollows)
 
-        if (!followTPC && !followStar && !followChannel) {
-          setBootstrappedFollows(true)
-          return
-        }
+  const run = async () => {
+    try {
+      console.log("[follows-effect] calling /api/farcaster/follows for fid", viewerFid)
 
-        // Update local discount flags
-        setDiscounts((prev) => ({
-          ...prev,
-          followTPC: prev.followTPC || !!followTPC,
-          followStar: prev.followStar || !!followStar,
-          followChannel: prev.followChannel || !!followChannel,
-        }))
-
-        // Optionally mirror these into the DB if we already know the wallet
-        if (userAddress) {
-          const actions: DiscountAction[] = []
-          if (followTPC) actions.push("follow_tpc")
-          if (followStar) actions.push("follow_star")
-          if (followChannel) actions.push("follow_channel")
-
-          await Promise.all(
-            actions.map((a) => registerDiscountAction(userAddress, a)),
-          )
-        }
-
-        setStatusMessage("Follow discounts auto-applied from Farcaster")
-      } catch (err) {
-        console.error("Failed to bootstrap follow discounts from Neynar/API", err)
-      } finally {
-        setBootstrappedFollows(true)
+      const res = await fetch(`/api/farcaster/follows?fid=${viewerFid}`)
+      if (!res.ok) {
+        throw new Error("Failed to fetch follow data")
       }
-    }
 
-    void run()
-  }, [isMiniApp, viewerFid, bootstrappedFollows, userAddress])
+      const data = await res.json()
+      console.log("[follows-effect] API result:", data)
+
+      const { followTPC, followStar, followChannel } = data
+
+      setDiscounts((prev) => ({
+        ...prev,
+        followTPC: prev.followTPC || followTPC,
+        followStar: prev.followStar || followStar,
+        followChannel: prev.followChannel || followChannel,
+      }))
+
+      // SUCCESS → mark bootstrapped
+      setBootstrappedFollows(true)
+
+    } catch (err) {
+      console.error("[follows-effect] bootstrap error:", err)
+      // do NOT setBootstrappedFollows(true)
+    }
+  }
+
+  run()
+}, [isMiniApp, viewerFid, bootstrappedFollows])
+
+
 
   const handleOpenCastIntent = async () => {
     const text =
@@ -754,7 +751,7 @@ export default function ClanktonMintPage() {
           </button>
 
           <button
-            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg:white/10 transition"
+            className="w-full rounded-2xl border border-white/40 bg-transparent text-sm px-4 py-3 text-center hover:bg-white/10 transition"
             onClick={handleBuyClankton}
           >
             {buyClanktonLabel}
@@ -799,7 +796,7 @@ export default function ClanktonMintPage() {
         </div>
 
         {/* Footer: wallet + status */}
-        <div className="flex items-center justify-between text-xs text:white/80 pt-1">
+        <div className="flex items-center justify-between text-xs text-white/80 pt-1">
           <div>
             {address ? (
               <>
