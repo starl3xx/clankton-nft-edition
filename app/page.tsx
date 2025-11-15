@@ -39,6 +39,9 @@ type DiscountFlags = {
   followChannel: boolean
 }
 
+// server-verified vs just locally-queued discounts
+type DiscountVerifiedFlags = DiscountFlags
+
 type MintPhase = "before" | "active" | "ended"
 
 type MintState = {
@@ -50,30 +53,17 @@ type MintState = {
   seconds: number
 }
 
-type FollowsResponse = {
-  followTPC: boolean
-  followStar: boolean
-  followChannel: boolean
-}
-
-type DiscountAction =
-  | "cast"
-  | "tweet"
-  | "follow_tpc"
-  | "follow_star"
-  | "follow_channel"
-
 const REACTION_LABELS = [
   "Nice 😏",
   "I see you 🥲",
   "Aww, thanks!",
   "Oh yeah!",
-  "&nbsp;🐐&nbsp;",
-  "Sweet!",
-  "w00t",
+  "🐐",
+  "Go off!",
+  "Crushing",
   "Easy, huh?",
-  "LFG!",
-  "High five!",
+  "LFG!!",
+  "🫡",
   "Chad",
 ]
 
@@ -101,6 +91,8 @@ export default function ClanktonMintPage() {
     : "Buy CLANKTON"
 
   const [loading, setLoading] = useState(false)
+
+  // local “has this user done the thing in this browser” flags
   const [discounts, setDiscounts] = useState<DiscountFlags>({
     casted: false,
     tweeted: false,
@@ -108,6 +100,17 @@ export default function ClanktonMintPage() {
     followStar: false,
     followChannel: false,
   })
+
+  // server-verified (or Neynar-verified) flags
+  const [discountVerified, setDiscountVerified] =
+    useState<DiscountVerifiedFlags>({
+      casted: false,
+      tweeted: false,
+      followTPC: false,
+      followStar: false,
+      followChannel: false,
+    })
+
   const [remotePrice, setRemotePrice] = useState<number | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [mintState, setMintState] = useState<MintState>({
@@ -143,6 +146,7 @@ export default function ClanktonMintPage() {
   }, [])
 
   // Mini app boot: tell shell we're ready, then pull viewer context
+  // Hydration-safe: only runs on client, guarded by typeof window
   useEffect(() => {
     if (typeof window === "undefined") return
 
@@ -168,8 +172,10 @@ export default function ClanktonMintPage() {
           if (typeof rawCtx?.viewer?.fid === "number") {
             fid = rawCtx.viewer.fid
           } else if (typeof rawCtx?.user?.fid === "number") {
+            // some hosts expose `user` instead of `viewer`
             fid = rawCtx.user.fid
           } else if (typeof rawCtx?.cast?.author?.fid === "number") {
+            // sometimes only the cast author is present
             fid = rawCtx.cast.author.fid
           }
 
@@ -198,39 +204,13 @@ export default function ClanktonMintPage() {
     }
   }, [])
 
-  // ---- DISCOUNT SECTION: write a discount action to DB ----
-
-  const registerDiscountAction = async (
-    addr: string | null | undefined,
-    action: DiscountAction,
-  ) => {
-    if (!addr) {
-      console.warn("registerDiscountAction: missing address, skipping", {
-        action,
-      })
-      return
-    }
-
-    try {
-      const res = await fetch("/api/register-discount-action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: addr, action }),
-      })
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "")
-        console.error("register-discount-action: non-OK response", {
-          status: res.status,
-          body: text,
-        })
-      }
-    } catch (err) {
-      console.error("register-discount-action failed", err)
-    }
-  }
-
   // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
+
+  type FollowsResponse = {
+    followTPC: boolean
+    followStar: boolean
+    followChannel: boolean
+  }
 
   useEffect(() => {
     console.log(
@@ -308,7 +288,17 @@ export default function ClanktonMintPage() {
           )
         }
 
+        // update local discount state
         setDiscounts(next)
+
+        // follows that came from Neynar are effectively verified
+        setDiscountVerified((prevVerified) => ({
+          ...prevVerified,
+          followTPC: prevVerified.followTPC || next.followTPC,
+          followStar: prevVerified.followStar || next.followStar,
+          followChannel: prevVerified.followChannel || next.followChannel,
+        }))
+
         setBootstrappedFollows(true)
       } catch (err) {
         console.error("[follows-effect] failed to bootstrap follows", err)
@@ -319,7 +309,14 @@ export default function ClanktonMintPage() {
     }
 
     void run()
-  }, [isMiniApp, viewerFid, bootstrappedFollows, discounts, userAddress])
+  }, [
+    isMiniApp,
+    viewerFid,
+    bootstrappedFollows,
+    discounts,
+    userAddress,
+    discountVerified,
+  ])
 
   // ---------- AUTOCONNECT FARCASTER WALLET VIA WAGMI ----------
 
@@ -367,6 +364,45 @@ export default function ClanktonMintPage() {
   const effectivePrice = remotePrice ?? localPrice
   const progressPct = Math.min(100, (minted / MAX_SUPPLY) * 100)
 
+  // ---- DISCOUNT SECTION ----------------------------------------------------
+
+  type DiscountAction =
+    | "cast"
+    | "tweet"
+    | "follow_tpc"
+    | "follow_star"
+    | "follow_channel"
+
+  const registerDiscountAction = async (
+    addr: string | null | undefined,
+    action: DiscountAction,
+  ) => {
+    if (!addr) {
+      console.warn("registerDiscountAction: missing address, skipping", {
+        action,
+      })
+      return
+    }
+
+    try {
+      const res = await fetch("/api/register-discount-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: addr, action }),
+      })
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "")
+        console.error("register-discount-action: non-OK response", {
+          status: res.status,
+          body: text,
+        })
+      }
+    } catch (err) {
+      console.error("register-discount-action failed", err)
+    }
+  }
+
   const handleOpenCastIntent = async () => {
     const text =
       "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
@@ -408,7 +444,7 @@ export default function ClanktonMintPage() {
 
     setDiscounts((p) => ({ ...p, tweeted: true }))
     setStatusMessage("X opened – don’t forget to tweet!")
-    void registerDiscountAction(userAddress, "tweet")
+    registerDiscountAction(userAddress, "tweet")
   }
 
   const handleFollowTPC = () => {
@@ -429,7 +465,7 @@ export default function ClanktonMintPage() {
 
     setDiscounts((p) => ({ ...p, followTPC: true }))
     setStatusMessage("Opened @thepapercrane – plz follow!")
-    void registerDiscountAction(userAddress, "follow_tpc")
+    registerDiscountAction(userAddress, "follow_tpc")
   }
 
   const handleFollowStar = () => {
@@ -450,7 +486,7 @@ export default function ClanktonMintPage() {
 
     setDiscounts((p) => ({ ...p, followStar: true }))
     setStatusMessage("Opened @starl3xx.eth – plz follow!")
-    void registerDiscountAction(userAddress, "follow_star")
+    registerDiscountAction(userAddress, "follow_star")
   }
 
   const handleFollowChannel = async () => {
@@ -465,7 +501,7 @@ export default function ClanktonMintPage() {
 
       setDiscounts((p) => ({ ...p, followChannel: true }))
       setStatusMessage("Opened /clankton – plz join!")
-      void registerDiscountAction(userAddress, "follow_channel")
+      registerDiscountAction(userAddress, "follow_channel")
     } catch (err) {
       console.error("open /clankton channel failed", err)
       setStatusMessage("Couldn’t open /clankton, try again")
@@ -486,13 +522,31 @@ export default function ClanktonMintPage() {
 
       const data = await res.json()
 
-      setDiscounts({
+      const serverFlags: DiscountFlags = {
         casted: data.casted ?? false,
         tweeted: data.tweeted ?? false,
         followTPC: data.followTPC ?? false,
         followStar: data.followStar ?? false,
         followChannel: data.followChannel ?? false,
-      })
+      }
+
+      // merge server truth with any locally queued actions
+      setDiscounts((prev) => ({
+        casted: prev.casted || serverFlags.casted,
+        tweeted: prev.tweeted || serverFlags.tweeted,
+        followTPC: prev.followTPC || serverFlags.followTPC,
+        followStar: prev.followStar || serverFlags.followStar,
+        followChannel: prev.followChannel || serverFlags.followChannel,
+      }))
+
+      // server is authoritative for “verified” state
+      setDiscountVerified((prevVerified) => ({
+        casted: prevVerified.casted || serverFlags.casted,
+        tweeted: prevVerified.tweeted || serverFlags.tweeted,
+        followTPC: prevVerified.followTPC || serverFlags.followTPC,
+        followStar: prevVerified.followStar || serverFlags.followStar,
+        followChannel: prevVerified.followChannel || serverFlags.followChannel,
+      }))
 
       setRemotePrice(Number(data.price))
       setStatusMessage("Discounts refreshed from server")
@@ -640,27 +694,34 @@ export default function ClanktonMintPage() {
               <DiscountPill
                 label="Cast"
                 value="-2M"
-                active={discounts.casted}
+                queued={discounts.casted && !discountVerified.casted}
+                verified={discountVerified.casted}
               />
               <DiscountPill
                 label="Tweet"
                 value="-1M"
-                active={discounts.tweeted}
+                queued={discounts.tweeted && !discountVerified.tweeted}
+                verified={discountVerified.tweeted}
               />
               <DiscountPill
                 label="@thepapercrane"
                 value="-500K"
-                active={discounts.followTPC}
+                queued={discounts.followTPC && !discountVerified.followTPC}
+                verified={discountVerified.followTPC}
               />
               <DiscountPill
                 label="@starl3xx"
                 value="-500K"
-                active={discounts.followStar}
+                queued={discounts.followStar && !discountVerified.followStar}
+                verified={discountVerified.followStar}
               />
               <DiscountPill
                 label="/clankton"
                 value="-500K"
-                active={discounts.followChannel}
+                queued={
+                  discounts.followChannel && !discountVerified.followChannel
+                }
+                verified={discountVerified.followChannel}
               />
             </div>
           </div>
@@ -835,7 +896,7 @@ export default function ClanktonMintPage() {
       {/* Lightbox preview */}
       {lightboxOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 transition-opacity duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center bg:black/80 p-4 transition-opacity duration-200"
           onClick={() => setLightboxOpen(false)}
         >
           <div
@@ -919,7 +980,7 @@ function CountdownPill({
   }
 
   return (
-    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text-white">
+    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text:white">
       Mint ends in {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
       {mintState.seconds}s
     </span>
@@ -956,12 +1017,20 @@ function EditionProgress({
 function DiscountPill({
   label,
   value,
-  active,
+  queued,
+  verified,
 }: {
   label: string
   value: string
-  active: boolean
+  queued: boolean
+  verified: boolean
 }) {
+  const active = queued || verified
+
+  let statusEmoji: string | null = null
+  if (verified) statusEmoji = "✅"
+  else if (queued) statusEmoji = "⏳"
+
   return (
     <div
       className={`px-2 py-1 rounded-full border text-xs flex items-center gap-1 ${
@@ -972,7 +1041,9 @@ function DiscountPill({
     >
       <span>{label}</span>
       <span>{value}</span>
-      {active && <span className="text-xs">• queued</span>}
+      {statusEmoji && (
+        <span className="text-xs leading-none">{statusEmoji}</span>
+      )}
     </div>
   )
 }
