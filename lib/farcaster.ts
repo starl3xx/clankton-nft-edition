@@ -1,101 +1,159 @@
 // lib/farcaster.ts
 import "server-only"
 
-const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY!
-const TPC_FID = 249958
-const STAR_FID = 6500
-const CHANNEL_ID = "clankton"
+const NEYNAR_API_BASE = "https://api.neynar.com/v2"
+const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY
 
+// Farcaster FIDs we care about
+const PAPERCRANE_FID = 249958
+const STARL3XX_FID = 6500
+
+if (!NEYNAR_API_KEY) {
+  // Fail fast on the server if misconfigured
+  console.error("[farcaster] NEYNAR_API_KEY is not set")
+}
+
+type NeynarUser = {
+  fid: number
+  viewer_context?: {
+    following?: boolean
+    followed_by?: boolean
+    blocking?: boolean
+    blocked_by?: boolean
+  }
+}
+
+type NeynarUserBulkResponse = {
+  users?: NeynarUser[]
+}
+
+type NeynarChannelUserResponse = {
+  user?: {
+    is_member?: boolean
+    role?: string
+  }
+  // some older shapes might put this at top-level
+  is_member?: boolean
+}
+
+/**
+ * Low-level Neynar GET helper.
+ */
+async function neynarGet<T>(
+  path: string,
+  params: Record<string, string | number | undefined>,
+): Promise<T> {
+  const search = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined) continue
+    search.set(k, String(v))
+  }
+
+  const url = `${NEYNAR_API_BASE}${path}?${search.toString()}`
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      // Neynar expects this header name exactly
+      api_key: NEYNAR_API_KEY ?? "",
+      "Content-Type": "application/json",
+    },
+    // Always hit the live Neynar API, never ISR cache
+    cache: "no-store",
+  })
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "")
+    console.error("[farcaster] Neynar non-OK response", {
+      path,
+      status: res.status,
+      body: text.slice(0, 500),
+    })
+    throw new Error(`Neynar error ${res.status} for ${path}`)
+  }
+
+  return (await res.json()) as T
+}
+
+/**
+ * Returns whether `viewerFid`:
+ *  - follows @thepapercrane
+ *  - follows @starl3xx.eth
+ *  - is a member of /clankton
+ */
 export async function getViewerFollowStatus(viewerFid: number) {
   if (!NEYNAR_API_KEY) {
-    throw new Error("Missing NEYNAR_API_KEY")
+    // Hard fail rather than silently returning false for everything
+    throw new Error("NEYNAR_API_KEY is not configured")
   }
 
-  // ---- 1) Check if viewer follows @thepapercrane ----
-  const followTPC = await checkUserFollows(viewerFid, TPC_FID)
+  // ---- 1. User follows via /user/bulk + viewer_context ---------------------
 
-  // ---- 2) Check if viewer follows @starl3xx ----
-  const followStar = await checkUserFollows(viewerFid, STAR_FID)
+  const bulk = await neynarGet<NeynarUserBulkResponse>(
+    "/farcaster/user/bulk",
+    {
+      // we only need the 2 accounts to check viewer_context.following
+      fids: `${PAPERCRANE_FID},${STARL3XX_FID}`,
+      viewer_fid: viewerFid,
+    },
+  )
 
-  // ---- 3) Check if viewer is a member/follower of /clankton ----
-  const followChannel = await checkChannelMembership(viewerFid, CHANNEL_ID)
+  const users = bulk.users ?? []
 
-  return { followTPC, followStar, followChannel }
-}
+  const tpc = users.find((u) => u.fid === PAPERCRANE_FID)
+  const star = users.find((u) => u.fid === STARL3XX_FID)
 
-/* ---------------------------------------------
-   USER FOLLOW CHECK
------------------------------------------------- */
-async function checkUserFollows(viewerFid: number, targetFid: number) {
-  const url =
-    `https://api.neynar.com/v2/farcaster/user/following` +
-    `?fid=${viewerFid}&target_fid=${targetFid}`
+  const followTPC = !!tpc?.viewer_context?.following
+  const followStar = !!star?.viewer_context?.following
 
-  try {
-    const res = await fetch(url, {
-      headers: { "x-api-key": NEYNAR_API_KEY },
-      cache: "no-store",
-    })
+  console.log("[farcaster] bulk follow status", {
+    viewerFid,
+    tpcFid: PAPERCRANE_FID,
+    tpcFollowing: tpc?.viewer_context?.following ?? null,
+    starFid: STARL3XX_FID,
+    starFollowing: star?.viewer_context?.following ?? null,
+  })
 
-    if (!res.ok) {
-      console.error("[farcaster] follow user error", res.status, await safeText(res))
-      return false
-    }
+  // ---- 2. Channel membership via /channel/user -----------------------------
 
-    const json = await res.json()
-    // Neynar uses: { result: { following: boolean } }
-    return json?.result?.following === true
-  } catch (err) {
-    console.error("[farcaster] follow user catch", err)
-    return false
-  }
-}
-
-/* ---------------------------------------------
-   CHANNEL MEMBERSHIP CHECK
------------------------------------------------- */
-async function checkChannelMembership(viewerFid: number, channelId: string) {
-  const url =
-    `https://api.neynar.com/v2/farcaster/channel/user` +
-    `?id=${channelId}&fid=${viewerFid}`
+  let followChannel = false
 
   try {
-    const res = await fetch(url, {
-      headers: { "x-api-key": NEYNAR_API_KEY },
-      cache: "no-store",
-    })
-
-    if (!res.ok) {
-      console.error("[farcaster] channel error", res.status, await safeText(res))
-      return false
-    }
-
-    const json = await res.json()
-
-    console.log("[farcaster] channel raw json:", JSON.stringify(json))
-
-    // Support BOTH shapes Neynar uses:
-    //
-    // 1. { result: { is_member: true, is_follower: true } }
-    // 2. { is_member: true } (older beta)
-    //
-    return (
-      json?.result?.is_member === true ||
-      json?.result?.is_follower === true ||
-      json?.is_member === true ||
-      json?.is_follower === true
+    const channel = await neynarGet<NeynarChannelUserResponse>(
+      "/farcaster/channel/user",
+      {
+        channel_id: "clankton",
+        fid: viewerFid,
+      },
     )
-  } catch (err) {
-    console.error("[farcaster] channel catch", err)
-    return false
-  }
-}
 
-/* Utility to safely extract text */
-async function safeText(res: Response) {
-  try {
-    return await res.text()
-  } catch {
-    return ""
+    const isMember =
+      channel.user?.is_member ??
+      channel.is_member ??
+      false
+
+    followChannel = !!isMember
+
+    console.log("[farcaster] channel user status", {
+      viewerFid,
+      channel: "clankton",
+      isMember,
+      raw: {
+        hasUser: !!channel.user,
+        userRole: channel.user?.role ?? null,
+      },
+    })
+  } catch (err) {
+    console.error("[farcaster] channel user lookup failed", {
+      viewerFid,
+      channel: "clankton",
+      err,
+    })
+    // swallow error – app should still work for account follows
+  }
+
+  return {
+    followTPC,
+    followStar,
+    followChannel,
   }
 }
