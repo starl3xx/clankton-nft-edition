@@ -1,155 +1,92 @@
 // lib/farcaster.ts
-import "server-only"
-
-const NEYNAR_API_BASE = "https://api.neynar.com/v2"
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY
-
-// Farcaster FIDs we care about
-const PAPERCRANE_FID = 249958
-const STARL3XX_FID = 6500
+const NEYNAR_BASE_URL = "https://api.neynar.com"
 
 if (!NEYNAR_API_KEY) {
-  // Fail fast on the server if misconfigured
-  console.error("[farcaster] NEYNAR_API_KEY is not set")
+  throw new Error("Missing NEYNAR_API_KEY in environment")
 }
 
-type NeynarUser = {
-  fid: number
-  viewer_context?: {
-    following?: boolean
-    followed_by?: boolean
-    blocking?: boolean
-    blocked_by?: boolean
-  }
+type ViewerFollowStatus = {
+  followTPC: boolean
+  followStar: boolean
+  followChannel: boolean
 }
 
-type NeynarUserBulkResponse = {
-  users?: NeynarUser[]
-}
+export async function getViewerFollowStatus(
+  viewerFid: number,
+): Promise<ViewerFollowStatus> {
+  const tpcFid = 249958
+  const starFid = 6500
+  const channelId = "clankton"
 
-type NeynarChannelUserResponse = {
-  user?: {
-    is_member?: boolean
-    role?: string
-  }
-  // some older shapes might put this at top-level
-  is_member?: boolean
-}
-
-/**
- * Low-level Neynar GET helper.
- */
-async function neynarGet<T>(
-  path: string,
-  params: Record<string, string | number | undefined>,
-): Promise<T> {
-  const search = new URLSearchParams()
-  for (const [k, v] of Object.entries(params)) {
-    if (v === undefined) continue
-    search.set(k, String(v))
+  const headers = {
+    "x-api-key": NEYNAR_API_KEY,
+    accept: "application/json",
   }
 
-  const url = `${NEYNAR_API_BASE}${path}?${search.toString()}`
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      // Neynar expects this header name exactly
-      api_key: NEYNAR_API_KEY ?? "",
-      "Content-Type": "application/json",
-    },
-    // Always hit the live Neynar API, never ISR cache
-    cache: "no-store",
-  })
+  const bulkUrl =
+    `${NEYNAR_BASE_URL}/v2/farcaster/user/bulk` +
+    `?fids=${tpcFid},${starFid}&viewer_fid=${viewerFid}`
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "")
-    console.error("[farcaster] Neynar non-OK response", {
-      path,
-      status: res.status,
-      body: text.slice(0, 500),
-    })
-    throw new Error(`Neynar error ${res.status} for ${path}`)
+  const channelUrl =
+    `${NEYNAR_BASE_URL}/v2/farcaster/channel/user` +
+    `?channel_id=${channelId}&fid=${viewerFid}`
+
+  const [bulkRes, channelRes] = await Promise.all([
+    fetch(bulkUrl, { headers }),
+    fetch(channelUrl, { headers }),
+  ])
+
+  if (!bulkRes.ok) {
+    const text = await bulkRes.text().catch(() => "")
+    console.error("[farcaster] bulk user error", bulkRes.status, text)
+    throw new Error("Neynar bulk user error")
   }
 
-  return (await res.json()) as T
-}
-
-/**
- * Returns whether `viewerFid`:
- *  - follows @thepapercrane
- *  - follows @starl3xx.eth
- *  - is a member of /clankton
- */
-export async function getViewerFollowStatus(viewerFid: number) {
-  if (!NEYNAR_API_KEY) {
-    // Hard fail rather than silently returning false for everything
-    throw new Error("NEYNAR_API_KEY is not configured")
+  if (!channelRes.ok) {
+    const text = await channelRes.text().catch(() => "")
+    console.error("[farcaster] channel user error", channelRes.status, text)
+    throw new Error("Neynar channel user error")
   }
 
-  // ---- 1. User follows via /user/bulk + viewer_context ---------------------
+  const bulkJson: any = await bulkRes.json()
+  const channelJson: any = await channelRes.json()
 
-  const bulk = await neynarGet<NeynarUserBulkResponse>(
-    "/farcaster/user/bulk",
-    {
-      // we only need the 2 accounts to check viewer_context.following
-      fids: `${PAPERCRANE_FID},${STARL3XX_FID}`,
-      viewer_fid: viewerFid,
-    },
-  )
+  // ----- user follows (TPC + Star) -----
+  const users: any[] = bulkJson?.users ?? []
 
-  const users = bulk.users ?? []
-
-  const tpc = users.find((u) => u.fid === PAPERCRANE_FID)
-  const star = users.find((u) => u.fid === STARL3XX_FID)
+  const tpc = users.find((u) => u.fid === tpcFid)
+  const star = users.find((u) => u.fid === starFid)
 
   const followTPC = !!tpc?.viewer_context?.following
   const followStar = !!star?.viewer_context?.following
 
   console.log("[farcaster] bulk follow status", {
     viewerFid,
-    tpcFid: PAPERCRANE_FID,
-    tpcFollowing: tpc?.viewer_context?.following ?? null,
-    starFid: STARL3XX_FID,
-    starFollowing: star?.viewer_context?.following ?? null,
+    tpcFid,
+    tpcFollowing: followTPC,
+    starFid,
+    starFollowing: followStar,
   })
 
-  // ---- 2. Channel membership via /channel/user -----------------------------
+  // ----- channel membership (/clankton) -----
+  // New Neynar shape: { channels: [ { id: "clankton", ... }, ... ] }
+  console.log(
+    "[farcaster] channel user raw",
+    JSON.stringify(channelJson, null, 2),
+  )
 
-  let followChannel = false
+  const channels: any[] = channelJson?.channels ?? []
+  const clanktonChannel = channels.find((c) => c?.id === channelId)
 
-  try {
-    const channel = await neynarGet<NeynarChannelUserResponse>(
-      "/farcaster/channel/user",
-      {
-        channel_id: "clankton",
-        fid: viewerFid,
-      },
-    )
+  // If there is an entry with id === "clankton", treat that as "is in channel"
+  const followChannel = !!clanktonChannel
 
-    const isMember =
-      channel.user?.is_member ??
-      channel.is_member ??
-      false
-
-    followChannel = !!isMember
-
-    console.log("[farcaster] channel user status", {
-      viewerFid,
-      channel: "clankton",
-      isMember,
-      raw: {
-        hasUser: !!channel.user,
-        userRole: channel.user?.role ?? null,
-      },
-    })
-  } catch (err) {
-    console.error("[farcaster] channel user lookup failed", {
-      viewerFid,
-      channel: "clankton",
-      err,
-    })
-    // swallow error – app should still work for account follows
-  }
+  console.log("[farcaster] channel user derived", {
+    viewerFid,
+    channel: channelId,
+    inList: !!clanktonChannel,
+  })
 
   return {
     followTPC,

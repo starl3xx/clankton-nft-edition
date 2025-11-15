@@ -68,12 +68,12 @@ const REACTION_LABELS = [
   "I see you 🥲",
   "Aww, thanks!",
   "Oh yeah!",
-  "🐐",
-  "Go off!",
-  "Crushing",
+  "&nbsp;🐐&nbsp;",
+  "Sweet!",
+  "w00t",
   "Easy, huh?",
-  "LFG!!",
-  "🫡",
+  "LFG!",
+  "High five!",
   "Chad",
 ]
 
