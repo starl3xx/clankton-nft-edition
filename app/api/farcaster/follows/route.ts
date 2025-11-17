@@ -10,7 +10,6 @@ export const dynamic = "force-dynamic"
 export async function GET(req: NextRequest) {
   // Basic IP-based rate limiting
   const ip =
-    req.ip ??
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "unknown"
 
