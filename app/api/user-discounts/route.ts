@@ -19,9 +19,17 @@ type DbRow = {
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address")
 
-  if (!address) {
-    return NextResponse.json({ error: "Missing address" }, { status: 400 })
-  }
+return apiError(
+  "USER_DISCOUNTS_MISSING_ADDRESS",
+  "Missing or invalid wallet address",
+  400,
+)
+
+return apiError(
+  "USER_DISCOUNTS_INTERNAL_ERROR",
+  "Couldn’t load your discounts right now",
+  500,
+)
 
   const normalized = address.toLowerCase()
 

@@ -1,38 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Farcaster NFT mint mini app
 
-## Getting Started
+A Farcaster mini app for minting the 50-edition **thepapercrane × $CLANKTON** NFT on Base. Users earn discounts by performing simple social actions (cast, tweet, follow, join channel), which are verified server-side using Neynar and stored in Postgres.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Farcaster mini app support (`@farcaster/miniapp-sdk`)
+- Auto-detects viewer FID and follow status via Neynar
+- Wagmi Farcaster wallet connection
+- Discount system:
+  - Cast (−2M CLANKTON)
+  - Tweet (−1M)
+  - Follow @thepapercrane (−500k)
+  - Follow @starl3xx.eth (−500k)
+  - Join /clankton (−500k)
+- Local queued discounts + server-verified discounts
+- Price calculation (base price − discounts)
+- Simple Postgres persistence with idempotent event logging
+
+## Tech stack
+
+- Next.js (App Router)
+- React + TypeScript
+- Tailwind CSS
+- Wagmi
+- Neynar API
+- Vercel Postgres
+
+## Environment variables
+
+Create `.env.local` and include:
+
+```
+NEYNAR_API_KEY=your_key_here
+DATABASE_URL=your_vercel_postgres_url
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+# Running locally
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Visit: `http://localhost:3000`
 
-## Learn More
+## Database tables
 
-To learn more about Next.js, take a look at the following resources:
+```
+clankton_discount_actions   // one row per (address, action)
+clankton_discounts          // summary booleans per wallet
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## API endpoints
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**GET /api/farcaster/follows?fid=...**  
+Returns Farcaster follow + channel membership status.
 
-## Deploy on Vercel
+**POST /api/register-discount-action**  
+Logs an action for a wallet (idempotent).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**GET /api/user-discounts?address=...**  
+Returns verified discount booleans + computed price.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# clankton-nft-edition
-# clankton-nft-edition
+**POST /api/mint-request**  
+Computes the mint price for a wallet.
+
+## Notes
+
+- Works inside Farcaster mini apps and normal browsers.
+- Follow discounts are auto-applied only inside the mini app.
+- UI shows:
+  - ⏳ queued (local actions)
+  - ✅ verified (server-confirmed actions)
+
+## License
+
+MIT

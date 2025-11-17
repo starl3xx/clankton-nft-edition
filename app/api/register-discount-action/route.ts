@@ -1,5 +1,7 @@
+// app/api/register-discount-action/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import { sql } from "@vercel/postgres"
+import { apiError } from "@/lib/api"
 
 export const runtime = "nodejs"
 
@@ -18,7 +20,8 @@ type DbRow = {
   follow_channel: boolean | null
 }
 
-async function getCurrentRow(address: string): Promise<DbRow | null> {
+// Fetch current summary row
+async function getSummaryRow(address: string): Promise<DbRow | null> {
   const result = await sql<DbRow>`
     SELECT casted, tweeted, follow_tpc, follow_star, follow_channel
     FROM clankton_discounts
@@ -36,15 +39,31 @@ export async function POST(req: NextRequest) {
     const action = body?.action as Action | undefined
 
     if (!address || !action) {
-      return NextResponse.json(
-        { error: "Missing address or action", received: body },
-        { status: 400 },
+      console.warn("[register-discount-action] missing address or action", {
+        body,
+      })
+      return apiError(
+        "DISCOUNT_BAD_REQUEST",
+        "Missing address or action",
+        400,
       )
     }
 
     const normalized = address.toLowerCase()
 
-    const current = (await getCurrentRow(normalized)) ?? {
+    // -------------------------------
+    // 1) Insert into event table (idempotent)
+    // -------------------------------
+    await sql`
+      INSERT INTO clankton_discount_actions (address, action)
+      VALUES (${normalized}, ${action})
+      ON CONFLICT (address, action) DO NOTHING;
+    `
+
+    // -------------------------------
+    // 2) Update summary table (existing booleans)
+    // -------------------------------
+    const current = (await getSummaryRow(normalized)) ?? {
       casted: false,
       tweeted: false,
       follow_tpc: false,
@@ -52,8 +71,7 @@ export async function POST(req: NextRequest) {
       follow_channel: false,
     }
 
-    const updated: DbRow = {
-      ...current,
+    const next: DbRow = {
       casted: current.casted ?? false,
       tweeted: current.tweeted ?? false,
       follow_tpc: current.follow_tpc ?? false,
@@ -61,13 +79,14 @@ export async function POST(req: NextRequest) {
       follow_channel: current.follow_channel ?? false,
     }
 
-    // Flip the appropriate flag to true
-    if (action === "cast") updated.casted = true
-    if (action === "tweet") updated.tweeted = true
-    if (action === "follow_tpc") updated.follow_tpc = true
-    if (action === "follow_star") updated.follow_star = true
-    if (action === "follow_channel") updated.follow_channel = true
+    // Flip the matching boolean
+    if (action === "cast") next.casted = true
+    if (action === "tweet") next.tweeted = true
+    if (action === "follow_tpc") next.follow_tpc = true
+    if (action === "follow_star") next.follow_star = true
+    if (action === "follow_channel") next.follow_channel = true
 
+    // Summary-table upsert
     await sql`
       INSERT INTO clankton_discounts (
         address,
@@ -79,30 +98,28 @@ export async function POST(req: NextRequest) {
       )
       VALUES (
         ${normalized},
-        ${updated.casted},
-        ${updated.tweeted},
-        ${updated.follow_tpc},
-        ${updated.follow_star},
-        ${updated.follow_channel}
+        ${next.casted},
+        ${next.tweeted},
+        ${next.follow_tpc},
+        ${next.follow_star},
+        ${next.follow_channel}
       )
       ON CONFLICT (address) DO UPDATE SET
-        casted         = EXCLUDED.casted,
-        tweeted        = EXCLUDED.tweeted,
-        follow_tpc     = EXCLUDED.follow_tpc,
-        follow_star    = EXCLUDED.follow_star,
-        follow_channel = EXCLUDED.follow_channel;
+        casted         = clankton_discounts.casted         OR EXCLUDED.casted,
+        tweeted        = clankton_discounts.tweeted        OR EXCLUDED.tweeted,
+        follow_tpc     = clankton_discounts.follow_tpc     OR EXCLUDED.follow_tpc,
+        follow_star    = clankton_discounts.follow_star    OR EXCLUDED.follow_star,
+        follow_channel = clankton_discounts.follow_channel OR EXCLUDED.follow_channel,
+        updated_at     = now();
     `
 
-    return NextResponse.json({ ok: true })
-  } catch (err: unknown) {
-    console.error("register-discount-action fatal error", err)
-    return NextResponse.json(
-      {
-        error: "Internal server error",
-        message:
-          err instanceof Error ? err.message : "Unknown error in register route",
-      },
-      { status: 500 },
+    return NextResponse.json({ ok: true }, { status: 200 })
+  } catch (err) {
+    console.error("[register-discount-action] fatal error", err)
+    return apiError(
+      "DISCOUNT_INTERNAL_ERROR",
+      "Could not record your discount action. Please try again.",
+      500,
     )
   }
 }

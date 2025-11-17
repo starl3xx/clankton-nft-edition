@@ -24,8 +24,8 @@ const CLANKTON_CAIP19 =
   "eip155:8453/erc20:0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07"
 
 // Farcaster FIDs
-const PAPERCRANE_FID = 249958 as number
-const STARL3XX_FID = 6500 as number
+const PAPERCRANE_FID = 249_958 as number
+const STARL3XX_FID = 6_500 as number
 
 // MINT START date in UTC
 const MINT_START = Math.floor(Date.UTC(2025, 11, 3, 0, 0, 0) / 1000)
@@ -39,7 +39,6 @@ type DiscountFlags = {
   followChannel: boolean
 }
 
-// server-verified vs just locally-queued discounts
 type DiscountVerifiedFlags = DiscountFlags
 
 type MintPhase = "before" | "active" | "ended"
@@ -53,13 +52,20 @@ type MintState = {
   seconds: number
 }
 
+type ApiErrorPayload = {
+  ok?: boolean
+  code?: string
+  message?: string
+  error?: string
+}
+
 const REACTION_LABELS = [
   "Nice 😏",
   "I see you 🥲",
   "Aww, thanks!",
   "Oh yeah!",
   "&nbsp;🐐&nbsp;",
-  "🥹🥹",
+  "🥹",
   "Woohoo!",
   "Yeehaw!",
   "LFG!",
@@ -68,7 +74,6 @@ const REACTION_LABELS = [
 ]
 
 export default function ClanktonMintPage() {
-  // Wagmi: Farcaster wallet
   const { address, isConnected } = useAccount()
   const { data: clanktonBalanceData } = useBalance({
     address,
@@ -79,7 +84,6 @@ export default function ClanktonMintPage() {
 
   const userAddress = address ?? null
 
-  // Real CLANKTON balance from Farcaster wallet
   const clanktonBalance = clanktonBalanceData
     ? Number(clanktonBalanceData.formatted)
     : 0
@@ -92,7 +96,6 @@ export default function ClanktonMintPage() {
 
   const [loading, setLoading] = useState(false)
 
-  // local “has this user done the thing in this browser” flags
   const [discounts, setDiscounts] = useState<DiscountFlags>({
     casted: false,
     tweeted: false,
@@ -101,7 +104,6 @@ export default function ClanktonMintPage() {
     followChannel: false,
   })
 
-  // server-verified (or Neynar-verified) flags
   const [discountVerified, setDiscountVerified] =
     useState<DiscountVerifiedFlags>({
       casted: false,
@@ -130,13 +132,8 @@ export default function ClanktonMintPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
   const [checkingFollows, setCheckingFollows] = useState(false)
-
   const [isMiniApp, setIsMiniApp] = useState(false)
-
-  // Farcaster viewer fid (only available inside mini app)
   const [viewerFid, setViewerFid] = useState<number | null>(null)
-
-  // Have we already auto-applied follow discounts from Neynar/API?
   const [bootstrappedFollows, setBootstrappedFollows] = useState(false)
 
   // countdown
@@ -145,53 +142,40 @@ export default function ClanktonMintPage() {
     return () => clearInterval(id)
   }, [])
 
-  // Mini app boot: tell shell we're ready, then pull viewer context
-  // Hydration-safe: only runs on client, guarded by typeof window
+  // Mini app boot
   useEffect(() => {
     if (typeof window === "undefined") return
 
     let cancelled = false
 
     const init = async () => {
-      console.log("[init] starting init effect")
       try {
         await sdk.actions.ready()
         if (cancelled) return
 
         setIsMiniApp(true)
-        console.log("[init] Mini app ready() OK")
 
         try {
           const rawCtx: any = await sdk.context
           if (cancelled) return
-
-          console.log("[init] raw miniapp context:", rawCtx)
 
           let fid: number | null = null
 
           if (typeof rawCtx?.viewer?.fid === "number") {
             fid = rawCtx.viewer.fid
           } else if (typeof rawCtx?.user?.fid === "number") {
-            // some hosts expose `user` instead of `viewer`
             fid = rawCtx.user.fid
           } else if (typeof rawCtx?.cast?.author?.fid === "number") {
-            // sometimes only the cast author is present
             fid = rawCtx.cast.author.fid
           }
 
           setViewerFid(fid)
-          console.log("[init] Mini-app viewer FID:", fid)
-        } catch (e) {
+        } catch {
           if (cancelled) return
-          console.warn(
-            "[init] sdk.context unavailable (dev preview or not in mini app)",
-            e,
-          )
           setViewerFid(null)
         }
-      } catch (err) {
+      } catch {
         if (cancelled) return
-        console.error("[init] Mini app boot failed", err)
         setIsMiniApp(false)
         setViewerFid(null)
       }
@@ -213,54 +197,22 @@ export default function ClanktonMintPage() {
   }
 
   useEffect(() => {
-    console.log(
-      "[follows-effect] run",
-      "isMiniApp=",
-      isMiniApp,
-      "viewerFid=",
-      viewerFid,
-      "bootstrappedFollows=",
-      bootstrappedFollows,
-      "userAddress=",
-      userAddress,
-    )
-
-    if (!isMiniApp) {
-      console.log("[follows-effect] not mini app, skipping")
-      return
-    }
-    if (!viewerFid) {
-      console.log("[follows-effect] no viewerFid yet, skipping")
-      return
-    }
-    if (bootstrappedFollows) {
-      console.log("[follows-effect] already bootstrapped, skipping")
-      return
-    }
+    if (!isMiniApp) return
+    if (!viewerFid) return
+    if (bootstrappedFollows) return
 
     const run = async () => {
       setCheckingFollows(true)
       try {
-        console.log(
-          "[follows-effect] calling /api/farcaster/follows for fid",
-          viewerFid,
-        )
-
         const res = await fetch(`/api/farcaster/follows?fid=${viewerFid}`)
         if (!res.ok) {
           const text = await res.text().catch(() => "")
-          console.error(
-            "[follows-effect] non-OK response",
-            res.status,
-            text,
-          )
+          console.error("[follows-effect] non-OK response", res.status, text)
           throw new Error("Failed to fetch follow data")
         }
 
         const data = (await res.json()) as FollowsResponse
         const { followTPC, followStar, followChannel } = data
-
-        console.log("[follows-effect] received", data)
 
         const prev = discounts
 
@@ -271,7 +223,6 @@ export default function ClanktonMintPage() {
           followChannel: prev.followChannel || followChannel,
         }
 
-        // Write to DB for flags that flipped false → true
         if (userAddress) {
           if (!prev.followTPC && next.followTPC) {
             void registerDiscountAction(userAddress, "follow_tpc")
@@ -282,16 +233,10 @@ export default function ClanktonMintPage() {
           if (!prev.followChannel && next.followChannel) {
             void registerDiscountAction(userAddress, "follow_channel")
           }
-        } else {
-          console.log(
-            "[follows-effect] no userAddress yet; DB will reflect follows only after wallet connects",
-          )
         }
 
-        // update local discount state
         setDiscounts(next)
 
-        // follows that came from Neynar are effectively verified
         setDiscountVerified((prevVerified) => ({
           ...prevVerified,
           followTPC: prevVerified.followTPC || next.followTPC,
@@ -302,7 +247,6 @@ export default function ClanktonMintPage() {
         setBootstrappedFollows(true)
       } catch (err) {
         console.error("[follows-effect] failed to bootstrap follows", err)
-        // do not set bootstrappedFollows so we can retry
       } finally {
         setCheckingFollows(false)
       }
@@ -321,24 +265,12 @@ export default function ClanktonMintPage() {
   // ---------- AUTOCONNECT FARCASTER WALLET VIA WAGMI ----------
 
   useEffect(() => {
-    // Only try inside the mini app
     if (!isMiniApp) return
-    // Don't reconnect if already connected
     if (isConnected) return
-    // Avoid spamming connect calls
     if (connectStatus === "pending") return
 
     const connector = connectors[0]
-    if (!connector) {
-      console.warn("[wagmi-autoconnect] no connector available")
-      return
-    }
-
-    console.log(
-      "[wagmi-autoconnect] attempting connect with",
-      connector.id,
-      connector.name,
-    )
+    if (!connector) return
 
     try {
       connect({ connector })
@@ -419,7 +351,7 @@ export default function ClanktonMintPage() {
       }
 
       setDiscounts((p) => ({ ...p, casted: true }))
-      setStatusMessage("Farcaster opened – don’t forget to cast!")
+      setStatusMessage("Farcaster opened – don’t forget to cast")
       await registerDiscountAction(userAddress, "cast")
     } catch (err) {
       console.error("composeCast/open cast failed", err)
@@ -443,7 +375,7 @@ export default function ClanktonMintPage() {
     )
 
     setDiscounts((p) => ({ ...p, tweeted: true }))
-    setStatusMessage("X opened – don’t forget to tweet!")
+    setStatusMessage("𝕏 opened – don’t forget to tweet")
     registerDiscountAction(userAddress, "tweet")
   }
 
@@ -464,7 +396,7 @@ export default function ClanktonMintPage() {
     }
 
     setDiscounts((p) => ({ ...p, followTPC: true }))
-    setStatusMessage("Opened @thepapercrane – plz follow!")
+    setStatusMessage("Opened @thepapercrane – please follow")
     registerDiscountAction(userAddress, "follow_tpc")
   }
 
@@ -485,7 +417,7 @@ export default function ClanktonMintPage() {
     }
 
     setDiscounts((p) => ({ ...p, followStar: true }))
-    setStatusMessage("Opened @starl3xx.eth – plz follow!")
+    setStatusMessage("Opened @starl3xx.eth – please follow")
     registerDiscountAction(userAddress, "follow_star")
   }
 
@@ -500,7 +432,7 @@ export default function ClanktonMintPage() {
       }
 
       setDiscounts((p) => ({ ...p, followChannel: true }))
-      setStatusMessage("Opened /clankton – plz join!")
+      setStatusMessage("Opened /clankton – please join")
       registerDiscountAction(userAddress, "follow_channel")
     } catch (err) {
       console.error("open /clankton channel failed", err)
@@ -518,7 +450,20 @@ export default function ClanktonMintPage() {
 
     try {
       const res = await fetch(`/api/user-discounts?address=${userAddress}`)
-      if (!res.ok) throw new Error("Failed to fetch discounts")
+      if (!res.ok) {
+        let errPayload: ApiErrorPayload | null = null
+        try {
+          errPayload = (await res.json()) as ApiErrorPayload
+        } catch {
+          // ignore JSON parse error
+        }
+        const msg =
+          errPayload?.message ||
+          errPayload?.error ||
+          "Could not refresh discounts"
+        setStatusMessage(msg)
+        return
+      }
 
       const data = await res.json()
 
@@ -530,7 +475,6 @@ export default function ClanktonMintPage() {
         followChannel: data.followChannel ?? false,
       }
 
-      // merge server truth with any locally queued actions
       setDiscounts((prev) => ({
         casted: prev.casted || serverFlags.casted,
         tweeted: prev.tweeted || serverFlags.tweeted,
@@ -539,7 +483,6 @@ export default function ClanktonMintPage() {
         followChannel: prev.followChannel || serverFlags.followChannel,
       }))
 
-      // server is authoritative for “verified” state
       setDiscountVerified((prevVerified) => ({
         casted: prevVerified.casted || serverFlags.casted,
         tweeted: prevVerified.tweeted || serverFlags.tweeted,
@@ -549,7 +492,7 @@ export default function ClanktonMintPage() {
       }))
 
       setRemotePrice(Number(data.price))
-      setStatusMessage("Discounts refreshed from server")
+      setStatusMessage("Discounts synced with server")
     } catch {
       setStatusMessage("Could not refresh discounts")
     } finally {
@@ -598,7 +541,22 @@ export default function ClanktonMintPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address: userAddress }),
       })
-      if (!res.ok) throw new Error("Failed to prepare mint")
+
+      if (!res.ok) {
+        let errPayload: ApiErrorPayload | null = null
+        try {
+          errPayload = (await res.json()) as ApiErrorPayload
+        } catch {
+          // ignore JSON parse
+        }
+        const msg =
+          errPayload?.message ||
+          errPayload?.error ||
+          "Mint failed – try again"
+        setStatusMessage(msg)
+        return
+      }
+
       await res.json()
 
       await new Promise((resolve) => setTimeout(resolve, 1200))
@@ -632,7 +590,7 @@ export default function ClanktonMintPage() {
       <div className="w-[420px] max-w-full mx-auto space-y-5">
         {/* Top: artwork + mint meta */}
         <div className="flex gap-4 items-stretch">
-          {/* Left: artwork with shine + parallax */}
+          {/* Left: artwork */}
           <div className="basis-1/3">
             <div
               className="w-full aspect-square cursor-pointer"
@@ -796,16 +754,14 @@ export default function ClanktonMintPage() {
             done={discounts.followChannel}
           />
 
-     <button
-       className="w-full text-xs rounded-xl border border-white/35      bg-white/15 px-3 py-2 text-white hover:bg-white/20 transition disabled:opacity-60"
-       onClick={refreshDiscountsFromServer}
-       disabled={loading}
-     >
-       {loading
-         ? "Refreshing…"
-         : "🔄 Refresh my discounts! (verifies on server)"}
-     </button>
-     </div>
+          <button
+            className="w-full text-xs rounded-xl border border-white/35 bg-white/15 px-3 py-2 text-white hover:bg-white/20 transition disabled:opacity-60"
+            onClick={refreshDiscountsFromServer}
+            disabled={loading}
+          >
+            {loading ? "Refreshing…" : "🔄 Refresh discounts (server)"}
+          </button>
+        </div>
 
         {/* Mint + Buy buttons */}
         <div className="space-y-2">
@@ -823,12 +779,12 @@ export default function ClanktonMintPage() {
               : "Mint with CLANKTON"}
           </button>
 
-     <button
-  className="w-full rounded-2xl border border-white/35 bg-white/15 text-sm px-4 py-3 text-center text-white hover:bg-white/20 transition"
-  onClick={handleBuyClankton}
-     >
-       {buyClanktonLabel}
-     </button>
+          <button
+            className="w-full rounded-2xl border border-white/35 bg:white/15 text-sm px-4 py-3 text-center text-white hover:bg-white/20 transition"
+            onClick={handleBuyClankton}
+          >
+            {buyClanktonLabel}
+          </button>
         </div>
 
         {/* FAQ */}
@@ -869,7 +825,7 @@ export default function ClanktonMintPage() {
         </div>
 
         {/* Footer: wallet + status */}
-        <div className="flex items-center justify-between text-xs text-white/80 pt-1">
+        <div className="flex items-center justify-between text-xs text:white/80 pt-1">
           <div>
             {address ? (
               <>
@@ -896,7 +852,7 @@ export default function ClanktonMintPage() {
       {/* Lightbox preview */}
       {lightboxOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg:black/80 p-4 transition-opacity duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 transition-opacity duration-200"
           onClick={() => setLightboxOpen(false)}
         >
           <div
@@ -980,7 +936,7 @@ function CountdownPill({
   }
 
   return (
-    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text:white">
+    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text-white">
       Mint ends in {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
       {mintState.seconds}s
     </span>
@@ -1027,6 +983,7 @@ function DiscountPill({
 }) {
   const active = queued || verified
 
+  // ✅ = verified/logged, ⏳ = queued locally
   let statusEmoji: string | null = null
   if (verified) statusEmoji = "✅"
   else if (queued) statusEmoji = "⏳"
