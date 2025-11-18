@@ -194,8 +194,8 @@ export async function getViewerFollowStatus(
     Array.isArray(channel?.channels) &&
     channel.channels.some((ch) => ch.id === CLANKTON_CHANNEL_ID)
 
-  // Check if user has Farcaster Pro (pro.status === "active" indicates pro subscription)
-  const farcasterPro = viewerUser?.pro?.status === "active"
+  // Check if user has Farcaster Pro (pro.status === "subscribed" indicates pro subscription)
+  const farcasterPro = viewerUser?.pro?.status === "subscribed"
 
   // Check if FID is less than 100,000 (early adopter)
   const earlyFid = viewerFid < 100_000
