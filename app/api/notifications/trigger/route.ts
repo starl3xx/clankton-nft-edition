@@ -4,17 +4,14 @@ import { sql } from "@vercel/postgres"
 /**
  * POST /api/notifications/trigger
  *
- * Triggers notifications to all users who have:
- * 1. Granted notification permission (have a token)
- * 2. Logged any discount actions
- *
- * This should be called when the mint goes live.
+ * Sends notifications to all users who have added the miniapp.
+ * Uses Neynar's notification API which handles token management automatically.
  *
  * Requires an admin secret for security.
  */
 export async function POST(req: NextRequest) {
   try {
-    // Basic auth check - you should use a secure secret
+    // Basic auth check
     const authHeader = req.headers.get("authorization")
     const adminSecret = process.env.ADMIN_SECRET
 
@@ -32,37 +29,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const body = await req.json()
-    const { notificationType = "mint_live" } = body
-
-    // Get all users who have:
-    // 1. A notification token (opted in)
-    // 2. At least one discount action logged
-    const eligibleUsers = await sql`
-      SELECT DISTINCT nt.fid, nt.token
-      FROM notification_tokens nt
-      INNER JOIN clankton_discount_actions cda
-        ON nt.fid::TEXT = cda.fid OR nt.address = cda.address
-      WHERE NOT EXISTS (
-        SELECT 1 FROM sent_notifications sn
-        WHERE sn.fid = nt.fid
-        AND sn.notification_type = ${notificationType}
-      )
-    `
-
-    if (eligibleUsers.rows.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: "No eligible users to notify",
-        count: 0,
-      })
-    }
-
-    console.log(
-      `[notifications trigger] Found ${eligibleUsers.rows.length} eligible users`
-    )
-
-    // Send notifications via Farcaster API
     const neynarApiKey = process.env.NEYNAR_API_KEY
     if (!neynarApiKey) {
       return NextResponse.json(
@@ -71,69 +37,79 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://clankton-nft-edition.vercel.app"}/api/notifications/webhook`
+    const body = await req.json().catch(() => ({}))
+    const { notificationType = "mint_live" } = body
 
-    // Send batch notification request to Farcaster/Neynar
-    const notificationPromises = eligibleUsers.rows.map(async (user) => {
-      try {
-        const response = await fetch(
-          "https://api.neynar.com/v2/farcaster/notifications",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-key": neynarApiKey,
-            },
-            body: JSON.stringify({
-              fid: user.fid,
-              token: user.token,
-              title: "🎉 CLANKTON Mint is LIVE!",
-              body: "The thepapercrane × $CLANKTON NFT mint is now live! Your discounts are ready.",
-              targetUrl: webhookUrl,
-            }),
-          }
-        )
+    // Optional: Get FIDs of users who have logged discount actions
+    // to only notify engaged users
+    const engagedUsers = await sql`
+      SELECT DISTINCT fid
+      FROM clankton_discount_actions
+      WHERE fid IS NOT NULL
+    `
 
-        if (!response.ok) {
-          console.error(
-            `[notifications] Failed to send to FID ${user.fid}:`,
-            await response.text()
-          )
-          return { fid: user.fid, success: false }
-        }
+    const targetFids = engagedUsers.rows
+      .map((row) => parseInt(row.fid))
+      .filter((fid) => !isNaN(fid))
 
-        // Mark as sent
-        await sql`
-          INSERT INTO sent_notifications (fid, notification_type)
-          VALUES (${user.fid}, ${notificationType})
-          ON CONFLICT (fid, notification_type) DO NOTHING
-        `
+    console.log(
+      `[notifications trigger] Targeting ${targetFids.length} engaged users (empty = all miniapp users)`
+    )
 
-        return { fid: user.fid, success: true }
-      } catch (err) {
-        console.error(
-          `[notifications] Error sending to FID ${user.fid}:`,
-          err
-        )
-        return { fid: user.fid, success: false }
+    // Send notification via Neynar's API
+    // Empty target_fids array = send to all users who added the miniapp
+    const response = await fetch(
+      "https://api.neynar.com/v2/farcaster/frame/notifications",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api_key": neynarApiKey,
+          accept: "application/json",
+        },
+        body: JSON.stringify({
+          notification: {
+            title: "🎉 CLANKTON Mint is LIVE!",
+            body: "The thepapercrane × $CLANKTON NFT mint is now live! Your discounts are ready.",
+            target_url: "https://clankton-nft-edition.vercel.app",
+          },
+          target_fids: targetFids.length > 0 ? targetFids : [], // Empty = all users
+        }),
       }
-    })
+    )
 
-    const results = await Promise.all(notificationPromises)
-    const successCount = results.filter((r) => r.success).length
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("[notifications] Neynar API error:", errorText)
+      return NextResponse.json(
+        { error: "Failed to send notifications", details: errorText },
+        { status: response.status }
+      )
+    }
+
+    const result = await response.json()
+
+    // Track that we sent this notification type
+    await sql`
+      INSERT INTO sent_notifications (fid, notification_type)
+      SELECT DISTINCT fid::BIGINT, ${notificationType}
+      FROM clankton_discount_actions
+      WHERE fid IS NOT NULL
+      ON CONFLICT (fid, notification_type) DO NOTHING
+    `
+
+    console.log("[notifications] Successfully sent via Neynar:", result)
 
     return NextResponse.json({
       success: true,
-      message: `Sent notifications to ${successCount}/${eligibleUsers.rows.length} users`,
-      totalEligible: eligibleUsers.rows.length,
-      sent: successCount,
-      failed: eligibleUsers.rows.length - successCount,
+      message: `Notifications sent to ${targetFids.length > 0 ? targetFids.length : "all"} users`,
+      neynarResponse: result,
     })
   } catch (err) {
     console.error("[notifications trigger] Error", err)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
-      )
+    )
   }
 }

@@ -207,33 +207,14 @@ export default function ClanktonMintPage() {
   useEffect(() => {
     if (!isMiniApp) return
 
-    const handleNotificationsEnabled = async ({
+    const handleNotificationsEnabled = ({
       notificationDetails,
     }: {
       notificationDetails: { token: string }
     }) => {
-      console.log("[notifications] Enabled with token", notificationDetails.token)
-
-      // Store the token in our database
-      if (viewerFid && notificationDetails.token) {
-        try {
-          await fetch("/api/notifications/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              fid: viewerFid,
-              token: notificationDetails.token,
-              address: userAddress,
-            }),
-          })
-
-          setNotificationsEnabled(true)
-          setStatusMessage("🔔 Notifications enabled! We'll notify you when the mint is live.")
-        } catch (err) {
-          console.error("[notifications] Failed to register token", err)
-        }
-      }
-
+      console.log("[notifications] Enabled - Neynar will manage token")
+      setNotificationsEnabled(true)
+      setStatusMessage("🔔 Notifications enabled! We'll notify you when the mint is live.")
       setRequestingNotifications(false)
     }
 
@@ -258,7 +239,7 @@ export default function ClanktonMintPage() {
       sdk.off("notificationsDisabled", handleNotificationsDisabled)
       sdk.off("miniAppAddRejected", handleMiniAppAddRejected)
     }
-  }, [isMiniApp, viewerFid, userAddress])
+  }, [isMiniApp])
 
   // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
 
