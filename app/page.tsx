@@ -797,7 +797,7 @@ export default function ClanktonMintPage() {
             <span className="text-white/70">{showHow ? "−" : "+"}</span>
           </button>
           {showHow && (
-            <div className="px-4 pb-3 text-xs text-white/80 space-y-2">
+            <div className="px-4 pb-3 pt-3 border-t border-white/15 text-xs text-white/80 space-y-2">
               <p>
                 ✪ When the mint goes live, anyone can mint an NFT until all 50
                 editions are sold out. There is no whitelist or allowlist.
