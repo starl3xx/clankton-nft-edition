@@ -42,6 +42,8 @@ type DiscountFlags = {
   followTPC: boolean
   followStar: boolean
   followChannel: boolean
+  farcasterPro: boolean
+  earlyFid: boolean
 }
 
 type DiscountVerifiedFlags = DiscountFlags
