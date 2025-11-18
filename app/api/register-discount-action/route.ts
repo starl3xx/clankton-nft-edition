@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
 
     const address = typeof body?.address === "string" ? body.address : null
     const action = body?.action as Action | undefined
+    const fid = typeof body?.fid === "number" ? String(body.fid) : null
 
     if (!address || !action) {
       console.warn("[register-discount-action] missing address or action", {
@@ -61,8 +62,8 @@ export async function POST(req: NextRequest) {
     // 1) Insert into event table (idempotent)
     // -------------------------------
     await sql`
-      INSERT INTO clankton_discount_actions (address, action)
-      VALUES (${normalized}, ${action})
+      INSERT INTO clankton_discount_actions (address, action, fid)
+      VALUES (${normalized}, ${action}, ${fid})
       ON CONFLICT (address, action) DO NOTHING;
     `
 

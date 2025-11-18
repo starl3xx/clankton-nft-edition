@@ -137,6 +137,8 @@ export default function ClanktonMintPage() {
     seconds: 0,
   })
   const [minted] = useState(0)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [requestingNotifications, setRequestingNotifications] = useState(false)
   const [showHow, setShowHow] = useState(false)
   const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({
     x: 0,
@@ -351,7 +353,11 @@ export default function ClanktonMintPage() {
       const res = await fetch("/api/register-discount-action", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: addr, action }),
+        body: JSON.stringify({
+          address: addr,
+          action,
+          fid: viewerFid, // Include FID for notification correlation
+        }),
       })
 
       if (!res.ok) {
@@ -576,6 +582,46 @@ export default function ClanktonMintPage() {
     } catch (err) {
       console.error("viewToken failed, falling back to external URL", err)
       window.open(fallbackUrl, "_blank")
+    }
+  }
+
+  const handleRequestNotifications = async () => {
+    if (!isMiniApp) {
+      setStatusMessage("Notifications are only available in the Farcaster miniapp")
+      return
+    }
+
+    if (!viewerFid) {
+      setStatusMessage("FID not available")
+      return
+    }
+
+    try {
+      setRequestingNotifications(true)
+
+      // Request notification permission from the user
+      const result = await sdk.actions.requestNotificationPermission()
+
+      if (result.token) {
+        // Store the token in our database
+        await fetch("/api/notifications/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fid: viewerFid,
+            token: result.token,
+            address: userAddress,
+          }),
+        })
+
+        setNotificationsEnabled(true)
+        setStatusMessage("🔔 Notifications enabled! We'll notify you when the mint is live.")
+      }
+    } catch (err) {
+      console.error("Failed to request notifications", err)
+      setStatusMessage("Failed to enable notifications")
+    } finally {
+      setRequestingNotifications(false)
     }
   }
 
@@ -872,6 +918,22 @@ export default function ClanktonMintPage() {
           >
             {loading ? "Refreshing…" : "🔄 Refresh discounts (server)"}
           </button>
+
+          {/* Notification permission button */}
+          {isMiniApp && !notificationsEnabled && (
+            <button
+              className="w-full text-xs rounded-xl border border-[#C9FF5B]/50 bg-[#C9FF5B]/10 px-3 py-2 text-[#C9FF5B] hover:bg-[#C9FF5B]/20 transition disabled:opacity-60"
+              onClick={handleRequestNotifications}
+              disabled={requestingNotifications}
+            >
+              {requestingNotifications ? "Requesting…" : "🔔 Get notified when mint is live"}
+            </button>
+          )}
+          {notificationsEnabled && (
+            <div className="w-full text-xs rounded-xl border border-[#C9FF5B]/50 bg-[#C9FF5B]/10 px-3 py-2 text-[#C9FF5B] text-center">
+              ✅ Notifications enabled
+            </div>
+          )}
         </div>
 
         {/* Mint + Buy buttons */}
