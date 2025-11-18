@@ -64,7 +64,7 @@ const REACTION_LABELS = [
   "I see you 🥲",
   "Aww, thanks!",
   "Oh yeah!",
-  "&nbsp;🐐&nbsp;",
+  "\u00A0🐐\u00A0",
   "🥹",
   "Woohoo!",
   "Yeehaw!",
