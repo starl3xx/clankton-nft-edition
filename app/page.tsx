@@ -203,6 +203,63 @@ export default function ClanktonMintPage() {
     }
   }, [])
 
+  // Notification permission event listener
+  useEffect(() => {
+    if (!isMiniApp) return
+
+    const handleNotificationsEnabled = async ({
+      notificationDetails,
+    }: {
+      notificationDetails: { token: string }
+    }) => {
+      console.log("[notifications] Enabled with token", notificationDetails.token)
+
+      // Store the token in our database
+      if (viewerFid && notificationDetails.token) {
+        try {
+          await fetch("/api/notifications/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fid: viewerFid,
+              token: notificationDetails.token,
+              address: userAddress,
+            }),
+          })
+
+          setNotificationsEnabled(true)
+          setStatusMessage("🔔 Notifications enabled! We'll notify you when the mint is live.")
+        } catch (err) {
+          console.error("[notifications] Failed to register token", err)
+        }
+      }
+
+      setRequestingNotifications(false)
+    }
+
+    const handleNotificationsDisabled = () => {
+      console.log("[notifications] Disabled")
+      setNotificationsEnabled(false)
+      setRequestingNotifications(false)
+    }
+
+    const handleMiniAppAddRejected = ({ reason }: { reason: string }) => {
+      console.log("[notifications] Add rejected:", reason)
+      setStatusMessage("Miniapp add was cancelled")
+      setRequestingNotifications(false)
+    }
+
+    sdk.on("notificationsEnabled", handleNotificationsEnabled)
+    sdk.on("notificationsDisabled", handleNotificationsDisabled)
+    sdk.on("miniAppAddRejected", handleMiniAppAddRejected)
+
+    return () => {
+      sdk.off("notificationsEnabled", handleNotificationsEnabled)
+      sdk.off("notificationsDisabled", handleNotificationsDisabled)
+      sdk.off("miniAppAddRejected", handleMiniAppAddRejected)
+    }
+  }, [isMiniApp, viewerFid, userAddress])
+
   // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
 
   type FollowsResponse = {
@@ -599,28 +656,23 @@ export default function ClanktonMintPage() {
     try {
       setRequestingNotifications(true)
 
-      // Request notification permission from the user
-      const result = await sdk.actions.requestNotificationPermission()
+      // Request to add miniapp (which can include notification permission)
+      // This will prompt the user to add the miniapp to their home screen
+      // and optionally grant notification permission
+      await sdk.actions.addMiniApp({
+        notificationDetails: {
+          title: "CLANKTON Mint Alerts",
+          body: "Get notified when the mint goes live",
+          url: window.location.origin,
+        },
+      })
 
-      if (result.token) {
-        // Store the token in our database
-        await fetch("/api/notifications/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fid: viewerFid,
-            token: result.token,
-            address: userAddress,
-          }),
-        })
-
-        setNotificationsEnabled(true)
-        setStatusMessage("🔔 Notifications enabled! We'll notify you when the mint is live.")
-      }
+      // The SDK will emit a 'notificationsEnabled' event if granted
+      // We'll handle that in a useEffect listener
+      setStatusMessage("Check your notifications to complete setup")
     } catch (err) {
       console.error("Failed to request notifications", err)
       setStatusMessage("Failed to enable notifications")
-    } finally {
       setRequestingNotifications(false)
     }
   }
