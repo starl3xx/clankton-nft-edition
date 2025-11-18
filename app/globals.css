@@ -65,3 +65,9 @@ body {
     transform: translateX(140%);
   }
 }
+
+/* Subtle white shadow for trophy emojis in badges */
+.trophy-badge {
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.6),
+               0 0 12px rgba(255, 255, 255, 0.4);
+}

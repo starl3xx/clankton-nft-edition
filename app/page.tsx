@@ -737,7 +737,7 @@ export default function ClanktonMintPage() {
             title="Follow @starl3xx.eth"
             description="Follow the CLANKTON Clanker for a 500,000 CLANKTON discount"
             ctaLabel="Follow"
-            badge="500K OFF!"
+            badge="🏆 500K OFF!"
             onClick={handleFollowStar}
             done={discounts.followStar}
           />
@@ -749,7 +749,7 @@ export default function ClanktonMintPage() {
             title="Follow the /clankton channel"
             description="Join the CLANKTON channel for a 500,000 CLANKTON discount"
             ctaLabel="Follow"
-            badge="500K OFF!"
+            badge="🏆 500K OFF!"
             onClick={handleFollowChannel}
             done={discounts.followChannel}
           />
@@ -1024,7 +1024,7 @@ function ActionRow(props: {
     <div className="relative rounded-3xl border border-white/20 bg-[#6E6099] p-3 flex items-center gap-3 shadow-[0_0_18px_rgba(255,255,255,0.14)]">
       {props.badge && (
         <div className="absolute -top-2 -left-1 origin-top-left -rotate-6">
-          <div className="bg-[#C9FF5B] text-[#33264D] text-[0.6rem] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60">
+          <div className={`bg-[#C9FF5B] text-[#33264D] text-[0.6rem] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60 ${props.badge.includes('🏆') ? 'trophy-badge' : ''}`}>
             {props.badge}
           </div>
         </div>
