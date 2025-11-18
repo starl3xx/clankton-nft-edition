@@ -891,7 +891,7 @@ export default function ClanktonMintPage() {
           </button>
 
           <button
-            className="w-full rounded-2xl border border-white/35 bg:white/15 text-sm px-4 py-3 text-center text-white hover:bg-white/20 transition"
+            className="w-full rounded-2xl bg-white text-[#33264D] text-sm px-4 py-3 text-center font-semibold hover:bg-[#C9FF5B] transition"
             onClick={handleBuyClankton}
           >
             {buyClanktonLabel}
