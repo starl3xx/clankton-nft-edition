@@ -29,15 +29,6 @@ A Farcaster mini app for minting the 50-edition **thepapercrane × $CLANKTON** N
 - Neynar API
 - Vercel Postgres
 
-## Environment variables
-
-Create `.env.local` and include:
-
-```
-NEYNAR_API_KEY=your_key_here
-DATABASE_URL=your_vercel_postgres_url
-```
-
 # Running locally
 
 ```
@@ -46,60 +37,6 @@ npm run dev
 ```
 
 Visit: `http://localhost:3000`
-
-## Pricing structure
-
-- **Base price:** 20,000,000 CLANKTON
-- **Maximum discount:** 9,500,000 CLANKTON (all discounts combined)
-- **Minimum price:** 10,500,000 CLANKTON
-
-| Discount Type | Amount | How to earn |
-|--------------|--------|-------------|
-| Cast about mint | 2M CLANKTON | Click "Cast" button |
-| Recast announcement | 4M CLANKTON | Click "Recast" button |
-| Tweet about mint | 1M CLANKTON | Click "Tweet" button |
-| Follow @thepapercrane | 500K CLANKTON | Auto-detected in mini app |
-| Follow @starl3xx.eth | 500K CLANKTON | Auto-detected in mini app |
-| Join /clankton channel | 500K CLANKTON | Auto-detected in mini app |
-| Farcaster Pro | 500K CLANKTON | Auto-detected in mini app |
-| Early FID (<100K) | 500K CLANKTON | Auto-detected in mini app |
-
-## Database tables
-
-```sql
--- Summary table with boolean flags for each discount type
-clankton_discounts (
-  address TEXT PRIMARY KEY,
-  casted BOOLEAN,
-  recast BOOLEAN,
-  tweeted BOOLEAN,
-  follow_tpc BOOLEAN,
-  follow_star BOOLEAN,
-  follow_channel BOOLEAN,
-  farcaster_pro BOOLEAN,
-  early_fid BOOLEAN,
-  updated_at TIMESTAMP
-)
-
--- Event log table (one row per address + action)
-clankton_discount_actions (
-  address TEXT,
-  action TEXT,
-  created_at TIMESTAMP
-  -- PRIMARY KEY (address, action)
-)
-```
-
-### Database migration
-
-To add the new discount columns (`recast`, `farcaster_pro`, `early_fid`):
-
-```sql
-ALTER TABLE clankton_discounts
-ADD COLUMN IF NOT EXISTS recast BOOLEAN DEFAULT FALSE,
-ADD COLUMN IF NOT EXISTS farcaster_pro BOOLEAN DEFAULT FALSE,
-ADD COLUMN IF NOT EXISTS early_fid BOOLEAN DEFAULT FALSE;
-```
 
 ## API endpoints
 
