@@ -790,7 +790,7 @@ export default function ClanktonMintPage() {
           <ActionRow
             icon={
               <div className="h-full w-full flex items-center justify-center bg-black text-white rounded-full">
-                <span className="text-lg font-bold">𝕏</span>
+                <span className="text-lg">𝕏</span>
               </div>
             }
             title="Tweet about this mint"
