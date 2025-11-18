@@ -1,0 +1,17 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjI0OTk1OCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAifQ",
+    "payload": "eyJkb21haW4iOiJjbGFua3Rvbi1uZnQtZWRpdGlvbi52ZXJjZWwuYXBwIn0",
+    "signature": "MHg..."
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "thepapercrane × $CLANKTON NFT mint",
+    "description": "Mint thepapercrane × $CLANKTON NFT with social discounts",
+    "iconUrl": "https://clankton-nft-edition.vercel.app/clankton-purple.png",
+    "homeUrl": "https://clankton-nft-edition.vercel.app",
+    "canonicalDomain": "clankton-nft-edition.vercel.app",
+    "requiredChains": ["eip155:8453"],
+    "requiredCapabilities": ["actions.ready", "actions.composeCast", "actions.viewProfile", "actions.viewToken", "actions.openUrl"]
+  }
+}

@@ -17,14 +17,25 @@ const dmMono = DM_Mono({
   variable: "--font-dm-mono",
 })
 
+const miniappManifest = {
+  version: "1",
+  name: "thepapercrane × $CLANKTON NFT mint",
+  description: "Mint thepapercrane × $CLANKTON NFT with social discounts",
+  iconUrl: "https://clankton-nft-edition.vercel.app/clankton-purple.png",
+  homeUrl: "https://clankton-nft-edition.vercel.app",
+  canonicalDomain: "clankton-nft-edition.vercel.app",
+  requiredChains: ["eip155:8453"],
+  requiredCapabilities: ["actions.ready", "actions.composeCast", "actions.viewProfile", "actions.viewToken", "actions.openUrl"],
+}
+
 export const metadata: Metadata = {
-  title: "thepapercrane × $CLANKTON NFT",
+  title: "thepapercrane × $CLANKTON NFT mint",
   description: "Mint thepapercrane × $CLANKTON NFT with social discounts",
   openGraph: {
-    title: "thepapercrane × $CLANKTON NFT",
+    title: "thepapercrane × $CLANKTON NFT mint",
     description: "Mint thepapercrane × $CLANKTON NFT with social discounts",
     url: "https://clankton-nft-edition.vercel.app",
-    siteName: "thepapercrane × $CLANKTON NFT",
+    siteName: "thepapercrane × $CLANKTON NFT mint",
     images: [
       {
         url: "https://clankton-nft-edition.vercel.app/clankton-banner.jpg",
@@ -36,19 +47,13 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "CLANKTON Mint",
+    title: "thepapercrane × $CLANKTON NFT mint",
     description: "Mint thepapercrane × $CLANKTON NFT with social discounts.",
     images: ["https://clankton-nft-edition.vercel.app/clankton-banner.jpg"],
   },
   other: {
     "fc:frame": "vNext",
-    "fc:app": "1",
-    "fc:miniapp:name": "CLANKTON Mint",
-    "fc:miniapp:icon":
-      "https://clankton-nft-edition.vercel.app/clankton-purple.png",
-    "fc:miniapp:description":
-      "Mint thepapercrane × $CLANKTON NFT with social discounts.",
-    "fc:miniapp:actions": "launch",
+    "fc:miniapp": JSON.stringify(miniappManifest),
   },
 }
 
