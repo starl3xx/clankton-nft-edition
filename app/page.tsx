@@ -762,7 +762,7 @@ export default function ClanktonMintPage() {
           />
 
           <ActionRow
-            icon={<Avatar src="/starl3xx.png" alt="@starl3xx.eth" />}
+            icon={<Avatar src="/farcaster.jpg" alt="Farcaster" />}
             title="Recast this post"
             description="Recast this announcement post from @starl3xx for a 4,000,000 CLANKTON discount"
             ctaLabel="Recast"
@@ -1073,7 +1073,7 @@ function ActionRow(props: {
     <div className="relative rounded-3xl border border-white/20 bg-[#6E6099] p-3 flex items-center gap-3 shadow-[0_0_18px_rgba(255,255,255,0.14)]">
       {props.badge && (
         <div className="absolute -top-2 -left-1 origin-top-left -rotate-6">
-          <div className="bg-[#C9FF5B] text-[#33264D] text-[0.6rem] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60">
+          <div className="bg-[#C9FF5B] text-[#33264D] text-[0.6rem] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60 animate-sparkle">
             {props.badge}
           </div>
         </div>
