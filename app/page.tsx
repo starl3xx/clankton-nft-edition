@@ -855,7 +855,7 @@ export default function ClanktonMintPage() {
             <StatusCard
               icon={<Avatar src="/fc-og.png" alt="Early FID" />}
               title="FID < 100K"
-              description="The early bird gets the 500,000 CLANKTON discount"
+              description="The early Warplet gets the 500,000 CLANKTON discount"
               badge="500K OFF!"
               active={discounts.earlyFid}
             />
