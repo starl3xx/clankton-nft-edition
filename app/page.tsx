@@ -803,8 +803,8 @@ export default function ClanktonMintPage() {
 
           <ActionRow
             icon={<Avatar src="/farcaster.jpg" alt="Farcaster" />}
-            title="Recast this post"
-            description="Recast this announcement post from @starl3xx for a 4,000,000 CLANKTON discount"
+            title="Recast the announcement"
+            description="Recast @starl3xx's announcement post for a 4,000,000 CLANKTON discount"
             ctaLabel="Recast"
             badge="4M OFF!"
             onClick={handleOpenRecastIntent}
@@ -848,14 +848,14 @@ export default function ClanktonMintPage() {
             <StatusCard
               icon={<Avatar src="/fc-pro.png" alt="Farcaster Pro" />}
               title="Farcaster Pro"
-              description="500,000 CLANKTON discount"
+              description="Burn your hard-earned money, get a 500,000 CLANKTON discount"
               badge="500K OFF!"
               active={discounts.farcasterPro}
             />
             <StatusCard
               icon={<Avatar src="/fc-og.png" alt="Early FID" />}
               title="FID < 100K"
-              description="500,000 CLANKTON discount"
+              description="The early bird gets the 500,000 CLANKTON discount"
               badge="500K OFF!"
               active={discounts.earlyFid}
             />
@@ -904,7 +904,8 @@ export default function ClanktonMintPage() {
             <span className="text-white/70">{showHow ? "−" : "+"}</span>
           </button>
           {showHow && (
-            <div className="px-4 pb-3 pt-3 border-t border-white/15 text-xs text-white/80 space-y-2">
+            <div className="px-4 pb-3 pt-3 text-xs text-white/80 space-y-2">
+              <div className="border-t border-white/15 w-4/5 mx-auto mb-3"></div>
               <p>
                 ✪ When the mint goes live, anyone can mint an NFT until all 50
                 editions are sold out. There is no whitelist or allowlist.
