@@ -84,3 +84,9 @@ body {
 .animate-sparkle {
   animation: sparkle 2s ease-in-out infinite;
 }
+
+/* Subtle white shadow for trophy emojis */
+.trophy-glow {
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.3))
+          drop-shadow(0 0 6px rgba(255, 255, 255, 0.2));
+}
