@@ -8,6 +8,7 @@ export const runtime = "nodejs"
 
 type DbRow = {
   casted: boolean | null
+  recast: boolean | null
   tweeted: boolean | null
   follow_tpc: boolean | null
   follow_star: boolean | null
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
     const normalized = address.toLowerCase()
 
     const result = await sql<DbRow>`
-      SELECT casted, tweeted, follow_tpc, follow_star, follow_channel
+      SELECT casted, recast, tweeted, follow_tpc, follow_star, follow_channel
       FROM clankton_discounts
       WHERE address = ${normalized}
       LIMIT 1;
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
 
     const flags: DiscountFlags = {
       casted: !!row?.casted,
+      recast: !!row?.recast,
       tweeted: !!row?.tweeted,
       followTPC: !!row?.follow_tpc,
       followStar: !!row?.follow_star,
