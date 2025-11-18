@@ -58,6 +58,8 @@ export async function POST(req: NextRequest) {
       followTPC: !!row?.follow_tpc,
       followStar: !!row?.follow_star,
       followChannel: !!row?.follow_channel,
+      farcasterPro: false, // Not stored in DB, fetched from Farcaster API
+      earlyFid: false, // Not stored in DB, computed from FID
     }
 
     const price = computePrice(flags)

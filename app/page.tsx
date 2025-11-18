@@ -108,6 +108,8 @@ export default function ClanktonMintPage() {
     followTPC: false,
     followStar: false,
     followChannel: false,
+    farcasterPro: false,
+    earlyFid: false,
   })
 
   const [discountVerified, setDiscountVerified] =
@@ -118,6 +120,8 @@ export default function ClanktonMintPage() {
       followTPC: false,
       followStar: false,
       followChannel: false,
+      farcasterPro: false,
+      earlyFid: false,
     })
 
   const [remotePrice, setRemotePrice] = useState<number | null>(null)
@@ -201,6 +205,8 @@ export default function ClanktonMintPage() {
     followTPC: boolean
     followStar: boolean
     followChannel: boolean
+    farcasterPro: boolean
+    earlyFid: boolean
   }
 
   useEffect(() => {
@@ -219,7 +225,7 @@ export default function ClanktonMintPage() {
         }
 
         const data = (await res.json()) as FollowsResponse
-        const { followTPC, followStar, followChannel } = data
+        const { followTPC, followStar, followChannel, farcasterPro, earlyFid } = data
 
         const prev = discounts
 
@@ -228,6 +234,8 @@ export default function ClanktonMintPage() {
           followTPC: prev.followTPC || followTPC,
           followStar: prev.followStar || followStar,
           followChannel: prev.followChannel || followChannel,
+          farcasterPro: prev.farcasterPro || farcasterPro,
+          earlyFid: prev.earlyFid || earlyFid,
         }
 
         if (userAddress) {
@@ -249,6 +257,8 @@ export default function ClanktonMintPage() {
           followTPC: prevVerified.followTPC || next.followTPC,
           followStar: prevVerified.followStar || next.followStar,
           followChannel: prevVerified.followChannel || next.followChannel,
+          farcasterPro: prevVerified.farcasterPro || next.farcasterPro,
+          earlyFid: prevVerified.earlyFid || next.earlyFid,
         }))
 
         setBootstrappedFollows(true)
@@ -297,6 +307,8 @@ export default function ClanktonMintPage() {
     if (discounts.followTPC) d += FOLLOW_DISCOUNT
     if (discounts.followStar) d += FOLLOW_DISCOUNT
     if (discounts.followChannel) d += FOLLOW_DISCOUNT
+    if (discounts.farcasterPro) d += FOLLOW_DISCOUNT
+    if (discounts.earlyFid) d += FOLLOW_DISCOUNT
     return d
   }, [discounts])
 
@@ -504,6 +516,8 @@ export default function ClanktonMintPage() {
         followTPC: data.followTPC ?? false,
         followStar: data.followStar ?? false,
         followChannel: data.followChannel ?? false,
+        farcasterPro: data.farcasterPro ?? false,
+        earlyFid: data.earlyFid ?? false,
       }
 
       setDiscounts((prev) => ({
@@ -513,6 +527,8 @@ export default function ClanktonMintPage() {
         followTPC: prev.followTPC || serverFlags.followTPC,
         followStar: prev.followStar || serverFlags.followStar,
         followChannel: prev.followChannel || serverFlags.followChannel,
+        farcasterPro: prev.farcasterPro || serverFlags.farcasterPro,
+        earlyFid: prev.earlyFid || serverFlags.earlyFid,
       }))
 
       setDiscountVerified((prevVerified) => ({
@@ -522,6 +538,8 @@ export default function ClanktonMintPage() {
         followTPC: prevVerified.followTPC || serverFlags.followTPC,
         followStar: prevVerified.followStar || serverFlags.followStar,
         followChannel: prevVerified.followChannel || serverFlags.followChannel,
+        farcasterPro: prevVerified.farcasterPro || serverFlags.farcasterPro,
+        earlyFid: prevVerified.earlyFid || serverFlags.earlyFid,
       }))
 
       setRemotePrice(Number(data.price))
@@ -720,6 +738,18 @@ export default function ClanktonMintPage() {
                 }
                 verified={discountVerified.followChannel}
               />
+              <DiscountPill
+                label="FC Pro"
+                value="-500K"
+                queued={discounts.farcasterPro && !discountVerified.farcasterPro}
+                verified={discountVerified.farcasterPro}
+              />
+              <DiscountPill
+                label="FID <100K"
+                value="-500K"
+                queued={discounts.earlyFid && !discountVerified.earlyFid}
+                verified={discountVerified.earlyFid}
+              />
             </div>
           </div>
         </div>
@@ -802,6 +832,24 @@ export default function ClanktonMintPage() {
             onClick={handleFollowChannel}
             done={discounts.followChannel}
           />
+
+          {/* Half-width non-actionable discount cards */}
+          <div className="grid grid-cols-2 gap-3">
+            <StatusCard
+              icon={<Avatar src="/fc-pro.png" alt="Farcaster Pro" />}
+              title="Farcaster Pro"
+              description="500,000 CLANKTON discount"
+              badge="500K OFF!"
+              active={discounts.farcasterPro}
+            />
+            <StatusCard
+              icon={<Avatar src="/fc-og.png" alt="Early FID" />}
+              title="FID < 100K"
+              description="500,000 CLANKTON discount"
+              badge="500K OFF!"
+              active={discounts.earlyFid}
+            />
+          </div>
 
           <button
             className="w-full text-xs rounded-xl border border-white/35 bg-white/15 px-3 py-2 text-white hover:bg-white/20 transition disabled:opacity-60"
@@ -1112,6 +1160,41 @@ function ActionRow(props: {
       >
         {props.ctaLabel}
       </button>
+    </div>
+  )
+}
+
+function StatusCard(props: {
+  icon?: ReactNode
+  title: string
+  description: string
+  badge?: string
+  active: boolean
+}) {
+  return (
+    <div className="relative rounded-3xl border border-white/20 bg-[#6E6099] p-3 flex flex-col gap-2 shadow-[0_0_18px_rgba(255,255,255,0.14)]">
+      {props.badge && (
+        <div className="absolute -top-2 -left-1 origin-top-left -rotate-6">
+          <div className="bg-[#C9FF5B] text-[#33264D] text-[0.6rem] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60">
+            {props.badge}
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        {props.icon && (
+          <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center border border-white/30 overflow-hidden shrink-0">
+            {props.icon}
+          </div>
+        )}
+        <div className="flex-1">
+          <div className="text-sm font-medium">{props.title}</div>
+        </div>
+        {props.active && (
+          <span className="text-lg">✅</span>
+        )}
+      </div>
+      <div className="text-xs text-white/80">{props.description}</div>
     </div>
   )
 }

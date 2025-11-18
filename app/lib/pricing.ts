@@ -4,6 +4,8 @@ export const CAST_DISCOUNT = 2_000_000;
 export const RECAST_DISCOUNT = 4_000_000;
 export const TWEET_DISCOUNT = 1_000_000;
 export const FOLLOW_DISCOUNT = 500_000;
+export const PRO_DISCOUNT = 500_000;
+export const EARLY_FID_DISCOUNT = 500_000;
 
 export type DiscountFlags = {
   casted: boolean;
@@ -12,6 +14,8 @@ export type DiscountFlags = {
   followTPC: boolean;
   followStar: boolean;
   followChannel: boolean;
+  farcasterPro: boolean;
+  earlyFid: boolean;
 };
 
 export function computeDiscount(flags: DiscountFlags): number {
@@ -22,6 +26,8 @@ export function computeDiscount(flags: DiscountFlags): number {
   if (flags.followTPC) d += FOLLOW_DISCOUNT;
   if (flags.followStar) d += FOLLOW_DISCOUNT;
   if (flags.followChannel) d += FOLLOW_DISCOUNT;
+  if (flags.farcasterPro) d += PRO_DISCOUNT;
+  if (flags.earlyFid) d += EARLY_FID_DISCOUNT;
   return d;
 }
 
