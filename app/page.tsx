@@ -1268,7 +1268,7 @@ function StatusCard(props: {
           <div className="text-sm font-medium">{props.title}</div>
         </div>
         {props.active && (
-          <span className="text-lg">🏆</span>
+          <span className="text-lg" style={{ textShadow: '0 0 8px rgba(255, 255, 255, 0.6), 0 0 12px rgba(255, 255, 255, 0.4)' }}>🏆</span>
         )}
       </div>
       <div className="text-xs text-white/80">{props.description}</div>
