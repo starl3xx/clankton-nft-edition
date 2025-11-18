@@ -7,6 +7,7 @@ export const runtime = "nodejs"
 
 type Action =
   | "cast"
+  | "recast"
   | "tweet"
   | "follow_tpc"
   | "follow_star"
@@ -14,6 +15,7 @@ type Action =
 
 type DbRow = {
   casted: boolean | null
+  recast: boolean | null
   tweeted: boolean | null
   follow_tpc: boolean | null
   follow_star: boolean | null
@@ -23,7 +25,7 @@ type DbRow = {
 // Fetch current summary row
 async function getSummaryRow(address: string): Promise<DbRow | null> {
   const result = await sql<DbRow>`
-    SELECT casted, tweeted, follow_tpc, follow_star, follow_channel
+    SELECT casted, recast, tweeted, follow_tpc, follow_star, follow_channel
     FROM clankton_discounts
     WHERE address = ${address}
     LIMIT 1;
@@ -65,6 +67,7 @@ export async function POST(req: NextRequest) {
     // -------------------------------
     const current = (await getSummaryRow(normalized)) ?? {
       casted: false,
+      recast: false,
       tweeted: false,
       follow_tpc: false,
       follow_star: false,
@@ -73,6 +76,7 @@ export async function POST(req: NextRequest) {
 
     const next: DbRow = {
       casted: current.casted ?? false,
+      recast: current.recast ?? false,
       tweeted: current.tweeted ?? false,
       follow_tpc: current.follow_tpc ?? false,
       follow_star: current.follow_star ?? false,
@@ -81,6 +85,7 @@ export async function POST(req: NextRequest) {
 
     // Flip the matching boolean
     if (action === "cast") next.casted = true
+    if (action === "recast") next.recast = true
     if (action === "tweet") next.tweeted = true
     if (action === "follow_tpc") next.follow_tpc = true
     if (action === "follow_star") next.follow_star = true
@@ -91,6 +96,7 @@ export async function POST(req: NextRequest) {
       INSERT INTO clankton_discounts (
         address,
         casted,
+        recast,
         tweeted,
         follow_tpc,
         follow_star,
@@ -99,6 +105,7 @@ export async function POST(req: NextRequest) {
       VALUES (
         ${normalized},
         ${next.casted},
+        ${next.recast},
         ${next.tweeted},
         ${next.follow_tpc},
         ${next.follow_star},
@@ -106,6 +113,7 @@ export async function POST(req: NextRequest) {
       )
       ON CONFLICT (address) DO UPDATE SET
         casted         = clankton_discounts.casted         OR EXCLUDED.casted,
+        recast         = clankton_discounts.recast         OR EXCLUDED.recast,
         tweeted        = clankton_discounts.tweeted        OR EXCLUDED.tweeted,
         follow_tpc     = clankton_discounts.follow_tpc     OR EXCLUDED.follow_tpc,
         follow_star    = clankton_discounts.follow_star    OR EXCLUDED.follow_star,

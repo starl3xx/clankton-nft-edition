@@ -13,6 +13,7 @@ import { sdk } from "@farcaster/miniapp-sdk"
 
 const BASE_PRICE = 20_000_000
 const CAST_DISCOUNT = 2_000_000
+const RECAST_DISCOUNT = 4_000_000
 const TWEET_DISCOUNT = 1_000_000
 const FOLLOW_DISCOUNT = 500_000
 const MAX_SUPPLY = 50
@@ -27,12 +28,16 @@ const CLANKTON_CAIP19 =
 const PAPERCRANE_FID = 249_958 as number
 const STARL3XX_FID = 6_500 as number
 
+// Recast target cast URL (update this once the mini app is live)
+const RECAST_TARGET_URL = "https://warpcast.com/starl3xx.eth/0xe514b0c0"
+
 // MINT START date in UTC
 const MINT_START = Math.floor(Date.UTC(2025, 11, 3, 0, 0, 0) / 1000)
 const MINT_END = MINT_START + 7 * 24 * 60 * 60
 
 type DiscountFlags = {
   casted: boolean
+  recast: boolean
   tweeted: boolean
   followTPC: boolean
   followStar: boolean
@@ -98,6 +103,7 @@ export default function ClanktonMintPage() {
 
   const [discounts, setDiscounts] = useState<DiscountFlags>({
     casted: false,
+    recast: false,
     tweeted: false,
     followTPC: false,
     followStar: false,
@@ -107,6 +113,7 @@ export default function ClanktonMintPage() {
   const [discountVerified, setDiscountVerified] =
     useState<DiscountVerifiedFlags>({
       casted: false,
+      recast: false,
       tweeted: false,
       followTPC: false,
       followStar: false,
@@ -285,6 +292,7 @@ export default function ClanktonMintPage() {
   const localDiscount = useMemo(() => {
     let d = 0
     if (discounts.casted) d += CAST_DISCOUNT
+    if (discounts.recast) d += RECAST_DISCOUNT
     if (discounts.tweeted) d += TWEET_DISCOUNT
     if (discounts.followTPC) d += FOLLOW_DISCOUNT
     if (discounts.followStar) d += FOLLOW_DISCOUNT
@@ -300,6 +308,7 @@ export default function ClanktonMintPage() {
 
   type DiscountAction =
     | "cast"
+    | "recast"
     | "tweet"
     | "follow_tpc"
     | "follow_star"
@@ -351,12 +360,33 @@ export default function ClanktonMintPage() {
       }
 
       setDiscounts((p) => ({ ...p, casted: true }))
-      setStatusMessage("Farcaster opened – don’t forget to cast")
+      setStatusMessage("Farcaster opened – don't forget to cast")
       await registerDiscountAction(userAddress, "cast")
     } catch (err) {
       console.error("composeCast/open cast failed", err)
       try {
         window.open(warpcastComposeUrl, "_blank", "noopener,noreferrer")
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  const handleOpenRecastIntent = async () => {
+    try {
+      if (isMiniApp) {
+        await sdk.actions.openUrl(RECAST_TARGET_URL)
+      } else {
+        window.open(RECAST_TARGET_URL, "_blank", "noopener,noreferrer")
+      }
+
+      setDiscounts((p) => ({ ...p, recast: true }))
+      setStatusMessage("Cast opened – don't forget to recast")
+      await registerDiscountAction(userAddress, "recast")
+    } catch (err) {
+      console.error("open recast URL failed", err)
+      try {
+        window.open(RECAST_TARGET_URL, "_blank", "noopener,noreferrer")
       } catch {
         // ignore
       }
@@ -469,6 +499,7 @@ export default function ClanktonMintPage() {
 
       const serverFlags: DiscountFlags = {
         casted: data.casted ?? false,
+        recast: data.recast ?? false,
         tweeted: data.tweeted ?? false,
         followTPC: data.followTPC ?? false,
         followStar: data.followStar ?? false,
@@ -477,6 +508,7 @@ export default function ClanktonMintPage() {
 
       setDiscounts((prev) => ({
         casted: prev.casted || serverFlags.casted,
+        recast: prev.recast || serverFlags.recast,
         tweeted: prev.tweeted || serverFlags.tweeted,
         followTPC: prev.followTPC || serverFlags.followTPC,
         followStar: prev.followStar || serverFlags.followStar,
@@ -485,6 +517,7 @@ export default function ClanktonMintPage() {
 
       setDiscountVerified((prevVerified) => ({
         casted: prevVerified.casted || serverFlags.casted,
+        recast: prevVerified.recast || serverFlags.recast,
         tweeted: prevVerified.tweeted || serverFlags.tweeted,
         followTPC: prevVerified.followTPC || serverFlags.followTPC,
         followStar: prevVerified.followStar || serverFlags.followStar,
@@ -656,6 +689,12 @@ export default function ClanktonMintPage() {
                 verified={discountVerified.casted}
               />
               <DiscountPill
+                label="Recast"
+                value="-4M"
+                queued={discounts.recast && !discountVerified.recast}
+                verified={discountVerified.recast}
+              />
+              <DiscountPill
                 label="Tweet"
                 value="-1M"
                 queued={discounts.tweeted && !discountVerified.tweeted}
@@ -720,6 +759,16 @@ export default function ClanktonMintPage() {
             badge="1M OFF!"
             onClick={handleOpenTweetIntent}
             done={discounts.tweeted}
+          />
+
+          <ActionRow
+            icon={<Avatar src="/starl3xx.png" alt="@starl3xx.eth" />}
+            title="Recast this post"
+            description="Recast this announcement post from @starl3xx for a 4,000,000 CLANKTON discount"
+            ctaLabel="Recast"
+            badge="4M OFF!"
+            onClick={handleOpenRecastIntent}
+            done={discounts.recast}
           />
 
           <ActionRow
