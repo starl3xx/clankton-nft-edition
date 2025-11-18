@@ -658,21 +658,20 @@ export default function ClanktonMintPage() {
 
       // Request to add miniapp (which can include notification permission)
       // This will prompt the user to add the miniapp to their home screen
-      // and optionally grant notification permission
-      await sdk.actions.addMiniApp({
-        notificationDetails: {
-          title: "CLANKTON Mint Alerts",
-          body: "Get notified when the mint goes live",
-          url: window.location.origin,
-        },
-      })
+      // The notification details are read from the manifest file
+      const result = await sdk.actions.addMiniApp()
 
-      // The SDK will emit a 'notificationsEnabled' event if granted
-      // We'll handle that in a useEffect listener
-      setStatusMessage("Check your notifications to complete setup")
+      // If notification details are returned, the user granted permission
+      if (result.notificationDetails) {
+        // The SDK will also emit a 'notificationsEnabled' event
+        // which we handle in a useEffect listener
+        console.log("[notifications] Granted via addMiniApp result")
+      }
+
+      setStatusMessage("Miniapp added! Check for notifications.")
     } catch (err) {
-      console.error("Failed to request notifications", err)
-      setStatusMessage("Failed to enable notifications")
+      console.error("Failed to add miniapp", err)
+      setStatusMessage("Failed to add miniapp")
       setRequestingNotifications(false)
     }
   }

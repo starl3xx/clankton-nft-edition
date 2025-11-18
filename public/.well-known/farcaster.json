@@ -12,6 +12,11 @@
     "homeUrl": "https://clankton-nft-edition.vercel.app",
     "canonicalDomain": "clankton-nft-edition.vercel.app",
     "requiredChains": ["eip155:8453"],
-    "requiredCapabilities": ["actions.ready", "actions.composeCast", "actions.viewProfile", "actions.viewToken", "actions.openUrl"]
+    "requiredCapabilities": ["actions.ready", "actions.composeCast", "actions.viewProfile", "actions.viewToken", "actions.openUrl"],
+    "notificationDetails": {
+      "title": "CLANKTON Mint Alerts",
+      "body": "Get notified when the mint goes live",
+      "url": "https://clankton-nft-edition.vercel.app"
+    }
   }
 }
