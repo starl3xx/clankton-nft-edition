@@ -1182,7 +1182,7 @@ function ActionRow(props: {
 function StatusCard(props: {
   icon?: ReactNode
   title: string
-  description: string
+  description: string | ReactNode
   badge?: string
   active: boolean
 }) {
