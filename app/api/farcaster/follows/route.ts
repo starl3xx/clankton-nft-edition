@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { followTPC, followStar, followChannel } =
+    const { followTPC, followStar, followChannel, farcasterPro, earlyFid } =
       await getViewerFollowStatus(viewerFid)
 
     return NextResponse.json(
@@ -53,6 +53,8 @@ export async function GET(req: NextRequest) {
         followTPC,
         followStar,
         followChannel,
+        farcasterPro,
+        earlyFid,
       },
       { status: 200 },
     )

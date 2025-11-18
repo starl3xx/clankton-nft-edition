@@ -12,6 +12,8 @@ type Action =
   | "follow_tpc"
   | "follow_star"
   | "follow_channel"
+  | "farcaster_pro"
+  | "early_fid"
 
 type DbRow = {
   casted: boolean | null
@@ -20,12 +22,14 @@ type DbRow = {
   follow_tpc: boolean | null
   follow_star: boolean | null
   follow_channel: boolean | null
+  farcaster_pro: boolean | null
+  early_fid: boolean | null
 }
 
 // Fetch current summary row
 async function getSummaryRow(address: string): Promise<DbRow | null> {
   const result = await sql<DbRow>`
-    SELECT casted, recast, tweeted, follow_tpc, follow_star, follow_channel
+    SELECT casted, recast, tweeted, follow_tpc, follow_star, follow_channel, farcaster_pro, early_fid
     FROM clankton_discounts
     WHERE address = ${address}
     LIMIT 1;
@@ -72,6 +76,8 @@ export async function POST(req: NextRequest) {
       follow_tpc: false,
       follow_star: false,
       follow_channel: false,
+      farcaster_pro: false,
+      early_fid: false,
     }
 
     const next: DbRow = {
@@ -81,6 +87,8 @@ export async function POST(req: NextRequest) {
       follow_tpc: current.follow_tpc ?? false,
       follow_star: current.follow_star ?? false,
       follow_channel: current.follow_channel ?? false,
+      farcaster_pro: current.farcaster_pro ?? false,
+      early_fid: current.early_fid ?? false,
     }
 
     // Flip the matching boolean
@@ -90,6 +98,8 @@ export async function POST(req: NextRequest) {
     if (action === "follow_tpc") next.follow_tpc = true
     if (action === "follow_star") next.follow_star = true
     if (action === "follow_channel") next.follow_channel = true
+    if (action === "farcaster_pro") next.farcaster_pro = true
+    if (action === "early_fid") next.early_fid = true
 
     // Summary-table upsert
     await sql`
@@ -100,7 +110,9 @@ export async function POST(req: NextRequest) {
         tweeted,
         follow_tpc,
         follow_star,
-        follow_channel
+        follow_channel,
+        farcaster_pro,
+        early_fid
       )
       VALUES (
         ${normalized},
@@ -109,7 +121,9 @@ export async function POST(req: NextRequest) {
         ${next.tweeted},
         ${next.follow_tpc},
         ${next.follow_star},
-        ${next.follow_channel}
+        ${next.follow_channel},
+        ${next.farcaster_pro},
+        ${next.early_fid}
       )
       ON CONFLICT (address) DO UPDATE SET
         casted         = clankton_discounts.casted         OR EXCLUDED.casted,
@@ -118,6 +132,8 @@ export async function POST(req: NextRequest) {
         follow_tpc     = clankton_discounts.follow_tpc     OR EXCLUDED.follow_tpc,
         follow_star    = clankton_discounts.follow_star    OR EXCLUDED.follow_star,
         follow_channel = clankton_discounts.follow_channel OR EXCLUDED.follow_channel,
+        farcaster_pro  = clankton_discounts.farcaster_pro  OR EXCLUDED.farcaster_pro,
+        early_fid      = clankton_discounts.early_fid      OR EXCLUDED.early_fid,
         updated_at     = now();
     `
 

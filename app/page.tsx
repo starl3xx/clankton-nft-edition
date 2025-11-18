@@ -248,6 +248,12 @@ export default function ClanktonMintPage() {
           if (!prev.followChannel && next.followChannel) {
             void registerDiscountAction(userAddress, "follow_channel")
           }
+          if (!prev.farcasterPro && next.farcasterPro) {
+            void registerDiscountAction(userAddress, "farcaster_pro")
+          }
+          if (!prev.earlyFid && next.earlyFid) {
+            void registerDiscountAction(userAddress, "early_fid")
+          }
         }
 
         setDiscounts(next)
@@ -325,6 +331,8 @@ export default function ClanktonMintPage() {
     | "follow_tpc"
     | "follow_star"
     | "follow_channel"
+    | "farcaster_pro"
+    | "early_fid"
 
   const registerDiscountAction = async (
     addr: string | null | undefined,

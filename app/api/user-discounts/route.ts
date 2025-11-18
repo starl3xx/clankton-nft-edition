@@ -16,6 +16,8 @@ type DbRow = {
   follow_tpc: boolean | null
   follow_star: boolean | null
   follow_channel: boolean | null
+  farcaster_pro: boolean | null
+  early_fid: boolean | null
 }
 
 export async function GET(req: NextRequest) {
@@ -33,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const result = await sql<DbRow>`
-      SELECT casted, recast, tweeted, follow_tpc, follow_star, follow_channel
+      SELECT casted, recast, tweeted, follow_tpc, follow_star, follow_channel, farcaster_pro, early_fid
       FROM clankton_discounts
       WHERE address = ${normalized}
       LIMIT 1;
@@ -48,8 +50,8 @@ export async function GET(req: NextRequest) {
       followTPC: !!row?.follow_tpc,
       followStar: !!row?.follow_star,
       followChannel: !!row?.follow_channel,
-      farcasterPro: false, // Not stored in DB, fetched from Farcaster API
-      earlyFid: false, // Not stored in DB, computed from FID
+      farcasterPro: !!row?.farcaster_pro,
+      earlyFid: !!row?.early_fid,
     }
 
     const price = computePrice(flags)
