@@ -38,7 +38,8 @@ async function neynarFetch<T>(
     ...(options.headers ?? {}),
   }
 
-  const { headers: _ignored, ...rest } = options
+  const { headers: _, ...rest } = options
+  void _ // Intentionally unused - we override headers above
 
   const res = await fetch(url, {
     ...rest,

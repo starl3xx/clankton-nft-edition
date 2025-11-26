@@ -9,6 +9,10 @@ import { apiError } from "@/lib/api"
 
 export const runtime = "nodejs"
 
+function isValidEthAddress(addr: string): boolean {
+  return /^0x[a-fA-F0-9]{40}$/.test(addr)
+}
+
 type DbRow = {
   casted: boolean | null
   recast: boolean | null
@@ -21,12 +25,21 @@ type DbRow = {
 }
 
 export async function GET(req: NextRequest) {
+  // TODO: optional rate limit
   const address = req.nextUrl.searchParams.get("address")
 
   if (!address) {
     return apiError(
       "USER_DISCOUNTS_MISSING_ADDRESS",
-      "Missing or invalid wallet address",
+      "Missing wallet address",
+      400,
+    )
+  }
+
+  if (!isValidEthAddress(address)) {
+    return apiError(
+      "USER_DISCOUNTS_INVALID_ADDRESS",
+      "Invalid wallet address format",
       400,
     )
   }

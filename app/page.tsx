@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -171,6 +172,7 @@ export default function ClanktonMintPage() {
         setIsMiniApp(true)
 
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const rawCtx: any = await sdk.context
           if (cancelled) return
 
@@ -207,11 +209,10 @@ export default function ClanktonMintPage() {
   useEffect(() => {
     if (!isMiniApp) return
 
-    const handleNotificationsEnabled = ({
-      notificationDetails,
-    }: {
-      notificationDetails: { token: string }
-    }) => {
+    const handleNotificationsEnabled = (
+      // Neynar manages the notification token automatically
+      _event: { notificationDetails: { token: string } },
+    ) => {
       console.log("[notifications] Enabled - Neynar will manage token")
       setNotificationsEnabled(true)
       setStatusMessage("🔔 Notifications enabled! We'll notify you when the mint is live.")
@@ -240,6 +241,52 @@ export default function ClanktonMintPage() {
       sdk.off("miniAppAddRejected", handleMiniAppAddRejected)
     }
   }, [isMiniApp])
+
+  // ---- DISCOUNT ACTION REGISTRATION ----
+
+  type DiscountAction =
+    | "cast"
+    | "recast"
+    | "tweet"
+    | "follow_tpc"
+    | "follow_star"
+    | "follow_channel"
+    | "farcaster_pro"
+    | "early_fid"
+
+  const registerDiscountAction = useCallback(
+    async (addr: string | null | undefined, action: DiscountAction) => {
+      if (!addr) {
+        console.warn("registerDiscountAction: missing address, skipping", {
+          action,
+        })
+        return
+      }
+
+      try {
+        const res = await fetch("/api/register-discount-action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            address: addr,
+            action,
+            fid: viewerFid, // Include FID for notification correlation
+          }),
+        })
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => "")
+          console.error("register-discount-action: non-OK response", {
+            status: res.status,
+            body: text,
+          })
+        }
+      } catch (err) {
+        console.error("register-discount-action failed", err)
+      }
+    },
+    [viewerFid],
+  )
 
   // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
 
@@ -325,6 +372,7 @@ export default function ClanktonMintPage() {
     discounts,
     userAddress,
     discountVerified,
+    registerDiscountAction,
   ])
 
   // ---------- AUTOCONNECT FARCASTER WALLET VIA WAGMI ----------
@@ -364,51 +412,7 @@ export default function ClanktonMintPage() {
   const effectivePrice = remotePrice ?? localPrice
   const progressPct = Math.min(100, (minted / MAX_SUPPLY) * 100)
 
-  // ---- DISCOUNT SECTION ----------------------------------------------------
-
-  type DiscountAction =
-    | "cast"
-    | "recast"
-    | "tweet"
-    | "follow_tpc"
-    | "follow_star"
-    | "follow_channel"
-    | "farcaster_pro"
-    | "early_fid"
-
-  const registerDiscountAction = async (
-    addr: string | null | undefined,
-    action: DiscountAction,
-  ) => {
-    if (!addr) {
-      console.warn("registerDiscountAction: missing address, skipping", {
-        action,
-      })
-      return
-    }
-
-    try {
-      const res = await fetch("/api/register-discount-action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          address: addr,
-          action,
-          fid: viewerFid, // Include FID for notification correlation
-        }),
-      })
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "")
-        console.error("register-discount-action: non-OK response", {
-          status: res.status,
-          body: text,
-        })
-      }
-    } catch (err) {
-      console.error("register-discount-action failed", err)
-    }
-  }
+  // ---- DISCOUNT ACTION HANDLERS ----
 
   const handleOpenCastIntent = async () => {
     const text =
@@ -1220,11 +1224,11 @@ function ActionRow(props: {
   done?: boolean
   badge?: string
 }) {
-  const funLabel = useMemo(() => {
-    if (!props.done) return null
-    const index = Math.floor(Math.random() * REACTION_LABELS.length)
-    return REACTION_LABELS[index]
-  }, [props.done])
+  // Use a stable random index computed once per done state change
+  const [funLabelIndex] = useState(() =>
+    Math.floor(Math.random() * REACTION_LABELS.length)
+  )
+  const funLabel = props.done ? REACTION_LABELS[funLabelIndex] : null
 
   return (
     <div className="relative rounded-3xl border border-white/20 bg-[#6E6099] p-3 flex items-center gap-3 shadow-[0_0_18px_rgba(255,255,255,0.14)]">
