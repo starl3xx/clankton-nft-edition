@@ -138,8 +138,6 @@ export default function ClanktonMintPage() {
     seconds: 0,
   })
   const [minted] = useState(0)
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
-  const [requestingNotifications, setRequestingNotifications] = useState(false)
   const [showHow, setShowHow] = useState(false)
   const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({
     x: 0,
@@ -204,43 +202,6 @@ export default function ClanktonMintPage() {
       cancelled = true
     }
   }, [])
-
-  // Notification permission event listener
-  useEffect(() => {
-    if (!isMiniApp) return
-
-    const handleNotificationsEnabled = (
-      // Neynar manages the notification token automatically
-      _event: { notificationDetails: { token: string } },
-    ) => {
-      console.log("[notifications] Enabled - Neynar will manage token")
-      setNotificationsEnabled(true)
-      setStatusMessage("🔔 Notifications enabled! We'll notify you when the mint is live.")
-      setRequestingNotifications(false)
-    }
-
-    const handleNotificationsDisabled = () => {
-      console.log("[notifications] Disabled")
-      setNotificationsEnabled(false)
-      setRequestingNotifications(false)
-    }
-
-    const handleMiniAppAddRejected = ({ reason }: { reason: string }) => {
-      console.log("[notifications] Add rejected:", reason)
-      setStatusMessage("Miniapp add was cancelled")
-      setRequestingNotifications(false)
-    }
-
-    sdk.on("notificationsEnabled", handleNotificationsEnabled)
-    sdk.on("notificationsDisabled", handleNotificationsDisabled)
-    sdk.on("miniAppAddRejected", handleMiniAppAddRejected)
-
-    return () => {
-      sdk.off("notificationsEnabled", handleNotificationsEnabled)
-      sdk.off("notificationsDisabled", handleNotificationsDisabled)
-      sdk.off("miniAppAddRejected", handleMiniAppAddRejected)
-    }
-  }, [isMiniApp])
 
   // ---- DISCOUNT ACTION REGISTRATION ----
 
@@ -627,40 +588,6 @@ export default function ClanktonMintPage() {
     }
   }
 
-  const handleRequestNotifications = async () => {
-    if (!isMiniApp) {
-      setStatusMessage("Notifications are only available in the Farcaster miniapp")
-      return
-    }
-
-    if (!viewerFid) {
-      setStatusMessage("FID not available")
-      return
-    }
-
-    try {
-      setRequestingNotifications(true)
-
-      // Request to add miniapp (which can include notification permission)
-      // This will prompt the user to add the miniapp to their home screen
-      // The notification details are read from the manifest file
-      const result = await sdk.actions.addMiniApp()
-
-      // If notification details are returned, the user granted permission
-      if (result.notificationDetails) {
-        // The SDK will also emit a 'notificationsEnabled' event
-        // which we handle in a useEffect listener
-        console.log("[notifications] Granted via addMiniApp result")
-      }
-
-      setStatusMessage("Miniapp added! Check for notifications.")
-    } catch (err) {
-      console.error("Failed to add miniapp", err)
-      setStatusMessage("Failed to add miniapp")
-      setRequestingNotifications(false)
-    }
-  }
-
   const handleMint = async () => {
     if (!userAddress || !isConnected) {
       setStatusMessage("Connect your Farcaster wallet to mint")
@@ -954,22 +881,6 @@ export default function ClanktonMintPage() {
           >
             {loading ? "Refreshing…" : "🔄 Refresh discounts (server)"}
           </button>
-
-          {/* Notification permission button */}
-          {isMiniApp && !notificationsEnabled && (
-            <button
-              className="w-full text-xs rounded-xl border border-[#C9FF5B]/50 bg-[#C9FF5B]/10 px-3 py-2 text-[#C9FF5B] hover:bg-[#C9FF5B]/20 transition disabled:opacity-60"
-              onClick={handleRequestNotifications}
-              disabled={requestingNotifications}
-            >
-              {requestingNotifications ? "Requesting…" : "🔔 Get notified when mint is live"}
-            </button>
-          )}
-          {notificationsEnabled && (
-            <div className="w-full text-xs rounded-xl border border-[#C9FF5B]/50 bg-[#C9FF5B]/10 px-3 py-2 text-[#C9FF5B] text-center">
-              ✅ Notifications enabled
-            </div>
-          )}
         </div>
 
         {/* Mint + Buy buttons */}
