@@ -15,6 +15,25 @@ type Action =
   | "farcaster_pro"
   | "early_fid"
 
+const VALID_ACTIONS: Action[] = [
+  "cast",
+  "recast",
+  "tweet",
+  "follow_tpc",
+  "follow_star",
+  "follow_channel",
+  "farcaster_pro",
+  "early_fid",
+]
+
+function isValidAction(value: unknown): value is Action {
+  return typeof value === "string" && VALID_ACTIONS.includes(value as Action)
+}
+
+function isValidEthAddress(addr: string): boolean {
+  return /^0x[a-fA-F0-9]{40}$/.test(addr)
+}
+
 type DbRow = {
   casted: boolean | null
   recast: boolean | null
@@ -38,20 +57,37 @@ async function getSummaryRow(address: string): Promise<DbRow | null> {
 }
 
 export async function POST(req: NextRequest) {
+  // TODO: optional rate limit
   try {
     const body = await req.json().catch(() => null)
 
     const address = typeof body?.address === "string" ? body.address : null
-    const action = body?.action as Action | undefined
+    const action = body?.action
     const fid = typeof body?.fid === "number" ? String(body.fid) : null
 
-    if (!address || !action) {
-      console.warn("[register-discount-action] missing address or action", {
-        body,
-      })
+    if (!address) {
+      console.warn("[register-discount-action] missing address", { body })
       return apiError(
         "DISCOUNT_BAD_REQUEST",
-        "Missing address or action",
+        "Missing wallet address",
+        400,
+      )
+    }
+
+    if (!isValidEthAddress(address)) {
+      console.warn("[register-discount-action] invalid address format", { address })
+      return apiError(
+        "DISCOUNT_INVALID_ADDRESS",
+        "Invalid wallet address format",
+        400,
+      )
+    }
+
+    if (!isValidAction(action)) {
+      console.warn("[register-discount-action] invalid action", { action })
+      return apiError(
+        "DISCOUNT_INVALID_ACTION",
+        "Invalid or missing discount action",
         400,
       )
     }

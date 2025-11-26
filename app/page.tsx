@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -137,8 +138,6 @@ export default function ClanktonMintPage() {
     seconds: 0,
   })
   const [minted] = useState(0)
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
-  const [requestingNotifications, setRequestingNotifications] = useState(false)
   const [showHow, setShowHow] = useState(false)
   const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({
     x: 0,
@@ -171,6 +170,7 @@ export default function ClanktonMintPage() {
         setIsMiniApp(true)
 
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const rawCtx: any = await sdk.context
           if (cancelled) return
 
@@ -203,43 +203,51 @@ export default function ClanktonMintPage() {
     }
   }, [])
 
-  // Notification permission event listener
-  useEffect(() => {
-    if (!isMiniApp) return
+  // ---- DISCOUNT ACTION REGISTRATION ----
 
-    const handleNotificationsEnabled = ({
-      notificationDetails,
-    }: {
-      notificationDetails: { token: string }
-    }) => {
-      console.log("[notifications] Enabled - Neynar will manage token")
-      setNotificationsEnabled(true)
-      setStatusMessage("🔔 Notifications enabled! We'll notify you when the mint is live.")
-      setRequestingNotifications(false)
-    }
+  type DiscountAction =
+    | "cast"
+    | "recast"
+    | "tweet"
+    | "follow_tpc"
+    | "follow_star"
+    | "follow_channel"
+    | "farcaster_pro"
+    | "early_fid"
 
-    const handleNotificationsDisabled = () => {
-      console.log("[notifications] Disabled")
-      setNotificationsEnabled(false)
-      setRequestingNotifications(false)
-    }
+  const registerDiscountAction = useCallback(
+    async (addr: string | null | undefined, action: DiscountAction) => {
+      if (!addr) {
+        console.warn("registerDiscountAction: missing address, skipping", {
+          action,
+        })
+        return
+      }
 
-    const handleMiniAppAddRejected = ({ reason }: { reason: string }) => {
-      console.log("[notifications] Add rejected:", reason)
-      setStatusMessage("Miniapp add was cancelled")
-      setRequestingNotifications(false)
-    }
+      try {
+        const res = await fetch("/api/register-discount-action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            address: addr,
+            action,
+            fid: viewerFid, // Include FID for notification correlation
+          }),
+        })
 
-    sdk.on("notificationsEnabled", handleNotificationsEnabled)
-    sdk.on("notificationsDisabled", handleNotificationsDisabled)
-    sdk.on("miniAppAddRejected", handleMiniAppAddRejected)
-
-    return () => {
-      sdk.off("notificationsEnabled", handleNotificationsEnabled)
-      sdk.off("notificationsDisabled", handleNotificationsDisabled)
-      sdk.off("miniAppAddRejected", handleMiniAppAddRejected)
-    }
-  }, [isMiniApp])
+        if (!res.ok) {
+          const text = await res.text().catch(() => "")
+          console.error("register-discount-action: non-OK response", {
+            status: res.status,
+            body: text,
+          })
+        }
+      } catch (err) {
+        console.error("register-discount-action failed", err)
+      }
+    },
+    [viewerFid],
+  )
 
   // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
 
@@ -325,6 +333,7 @@ export default function ClanktonMintPage() {
     discounts,
     userAddress,
     discountVerified,
+    registerDiscountAction,
   ])
 
   // ---------- AUTOCONNECT FARCASTER WALLET VIA WAGMI ----------
@@ -364,51 +373,7 @@ export default function ClanktonMintPage() {
   const effectivePrice = remotePrice ?? localPrice
   const progressPct = Math.min(100, (minted / MAX_SUPPLY) * 100)
 
-  // ---- DISCOUNT SECTION ----------------------------------------------------
-
-  type DiscountAction =
-    | "cast"
-    | "recast"
-    | "tweet"
-    | "follow_tpc"
-    | "follow_star"
-    | "follow_channel"
-    | "farcaster_pro"
-    | "early_fid"
-
-  const registerDiscountAction = async (
-    addr: string | null | undefined,
-    action: DiscountAction,
-  ) => {
-    if (!addr) {
-      console.warn("registerDiscountAction: missing address, skipping", {
-        action,
-      })
-      return
-    }
-
-    try {
-      const res = await fetch("/api/register-discount-action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          address: addr,
-          action,
-          fid: viewerFid, // Include FID for notification correlation
-        }),
-      })
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "")
-        console.error("register-discount-action: non-OK response", {
-          status: res.status,
-          body: text,
-        })
-      }
-    } catch (err) {
-      console.error("register-discount-action failed", err)
-    }
-  }
+  // ---- DISCOUNT ACTION HANDLERS ----
 
   const handleOpenCastIntent = async () => {
     const text =
@@ -620,40 +585,6 @@ export default function ClanktonMintPage() {
     } catch (err) {
       console.error("viewToken failed, falling back to external URL", err)
       window.open(fallbackUrl, "_blank")
-    }
-  }
-
-  const handleRequestNotifications = async () => {
-    if (!isMiniApp) {
-      setStatusMessage("Notifications are only available in the Farcaster miniapp")
-      return
-    }
-
-    if (!viewerFid) {
-      setStatusMessage("FID not available")
-      return
-    }
-
-    try {
-      setRequestingNotifications(true)
-
-      // Request to add miniapp (which can include notification permission)
-      // This will prompt the user to add the miniapp to their home screen
-      // The notification details are read from the manifest file
-      const result = await sdk.actions.addMiniApp()
-
-      // If notification details are returned, the user granted permission
-      if (result.notificationDetails) {
-        // The SDK will also emit a 'notificationsEnabled' event
-        // which we handle in a useEffect listener
-        console.log("[notifications] Granted via addMiniApp result")
-      }
-
-      setStatusMessage("Miniapp added! Check for notifications.")
-    } catch (err) {
-      console.error("Failed to add miniapp", err)
-      setStatusMessage("Failed to add miniapp")
-      setRequestingNotifications(false)
     }
   }
 
@@ -950,22 +881,6 @@ export default function ClanktonMintPage() {
           >
             {loading ? "Refreshing…" : "🔄 Refresh discounts (server)"}
           </button>
-
-          {/* Notification permission button */}
-          {isMiniApp && !notificationsEnabled && (
-            <button
-              className="w-full text-xs rounded-xl border border-[#C9FF5B]/50 bg-[#C9FF5B]/10 px-3 py-2 text-[#C9FF5B] hover:bg-[#C9FF5B]/20 transition disabled:opacity-60"
-              onClick={handleRequestNotifications}
-              disabled={requestingNotifications}
-            >
-              {requestingNotifications ? "Requesting…" : "🔔 Get notified when mint is live"}
-            </button>
-          )}
-          {notificationsEnabled && (
-            <div className="w-full text-xs rounded-xl border border-[#C9FF5B]/50 bg-[#C9FF5B]/10 px-3 py-2 text-[#C9FF5B] text-center">
-              ✅ Notifications enabled
-            </div>
-          )}
         </div>
 
         {/* Mint + Buy buttons */}
@@ -1220,11 +1135,11 @@ function ActionRow(props: {
   done?: boolean
   badge?: string
 }) {
-  const funLabel = useMemo(() => {
-    if (!props.done) return null
-    const index = Math.floor(Math.random() * REACTION_LABELS.length)
-    return REACTION_LABELS[index]
-  }, [props.done])
+  // Use a stable random index computed once per done state change
+  const [funLabelIndex] = useState(() =>
+    Math.floor(Math.random() * REACTION_LABELS.length)
+  )
+  const funLabel = props.done ? REACTION_LABELS[funLabelIndex] : null
 
   return (
     <div className="relative rounded-3xl border border-white/20 bg-[#6E6099] p-3 flex items-center gap-3 shadow-[0_0_18px_rgba(255,255,255,0.14)]">

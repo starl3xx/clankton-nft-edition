@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "api_key": neynarApiKey,
+          "x-api-key": neynarApiKey,
           accept: "application/json",
         },
         body: JSON.stringify({

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sql } from "@vercel/postgres"
 import { ethers } from "ethers"
+import { apiError } from "@/lib/api"
+
+function isValidEthAddress(addr: string): boolean {
+  return /^0x[a-fA-F0-9]{40}$/.test(addr)
+}
 
 /**
  * POST /api/mint-signature
@@ -12,14 +17,24 @@ import { ethers } from "ethers"
  * will verify this signature before allowing the mint.
  */
 export async function POST(req: NextRequest) {
+  // TODO: optional rate limit
   try {
-    const body = await req.json()
-    const { address } = body
+    const body = await req.json().catch(() => null)
+    const address = typeof body?.address === "string" ? body.address : null
 
-    if (!address || typeof address !== "string") {
-      return NextResponse.json(
-        { error: "Invalid address" },
-        { status: 400 }
+    if (!address) {
+      return apiError(
+        "MINT_SIG_MISSING_ADDRESS",
+        "Missing wallet address",
+        400,
+      )
+    }
+
+    if (!isValidEthAddress(address)) {
+      return apiError(
+        "MINT_SIG_INVALID_ADDRESS",
+        "Invalid wallet address format",
+        400,
       )
     }
 
@@ -76,9 +91,11 @@ export async function POST(req: NextRequest) {
     // Load signer private key from environment
     const signerPrivateKey = process.env.SIGNER_PRIVATE_KEY
     if (!signerPrivateKey) {
-      return NextResponse.json(
-        { error: "Signer not configured" },
-        { status: 500 }
+      console.error("[mint-signature] SIGNER_PRIVATE_KEY not configured")
+      return apiError(
+        "MINT_SIG_CONFIG_ERROR",
+        "Signing is not configured",
+        500,
       )
     }
 
@@ -131,9 +148,10 @@ export async function POST(req: NextRequest) {
     })
   } catch (err) {
     console.error("[mint-signature] Error", err)
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+    return apiError(
+      "MINT_SIG_INTERNAL_ERROR",
+      "Could not generate mint signature",
+      500,
     )
   }
 }
