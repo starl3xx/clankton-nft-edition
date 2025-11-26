@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic"
 export async function GET(req: NextRequest) {
   // Basic IP-based rate limiting
   const ip =
-    req.ip ??
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
     "unknown"
 
   try {
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { followTPC, followStar, followChannel } =
+    const { followTPC, followStar, followChannel, farcasterPro, earlyFid } =
       await getViewerFollowStatus(viewerFid)
 
     return NextResponse.json(
@@ -53,6 +53,8 @@ export async function GET(req: NextRequest) {
         followTPC,
         followStar,
         followChannel,
+        farcasterPro,
+        earlyFid,
       },
       { status: 200 },
     )

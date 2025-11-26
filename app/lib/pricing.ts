@@ -1,24 +1,33 @@
 // app/lib/pricing.ts
 export const BASE_PRICE = 20_000_000;
 export const CAST_DISCOUNT = 2_000_000;
+export const RECAST_DISCOUNT = 4_000_000;
 export const TWEET_DISCOUNT = 1_000_000;
 export const FOLLOW_DISCOUNT = 500_000;
+export const PRO_DISCOUNT = 500_000;
+export const EARLY_FID_DISCOUNT = 500_000;
 
 export type DiscountFlags = {
   casted: boolean;
+  recast: boolean;
   tweeted: boolean;
   followTPC: boolean;
   followStar: boolean;
   followChannel: boolean;
+  farcasterPro: boolean;
+  earlyFid: boolean;
 };
 
 export function computeDiscount(flags: DiscountFlags): number {
   let d = 0;
   if (flags.casted) d += CAST_DISCOUNT;
+  if (flags.recast) d += RECAST_DISCOUNT;
   if (flags.tweeted) d += TWEET_DISCOUNT;
   if (flags.followTPC) d += FOLLOW_DISCOUNT;
   if (flags.followStar) d += FOLLOW_DISCOUNT;
   if (flags.followChannel) d += FOLLOW_DISCOUNT;
+  if (flags.farcasterPro) d += PRO_DISCOUNT;
+  if (flags.earlyFid) d += EARLY_FID_DISCOUNT;
   return d;
 }
 

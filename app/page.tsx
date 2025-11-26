@@ -13,6 +13,7 @@ import { sdk } from "@farcaster/miniapp-sdk"
 
 const BASE_PRICE = 20_000_000
 const CAST_DISCOUNT = 2_000_000
+const RECAST_DISCOUNT = 4_000_000
 const TWEET_DISCOUNT = 1_000_000
 const FOLLOW_DISCOUNT = 500_000
 const MAX_SUPPLY = 50
@@ -27,16 +28,22 @@ const CLANKTON_CAIP19 =
 const PAPERCRANE_FID = 249_958 as number
 const STARL3XX_FID = 6_500 as number
 
+// Recast target cast URL (update this once the mini app is live)
+const RECAST_TARGET_URL = "https://warpcast.com/starl3xx.eth/0xe514b0c0"
+
 // MINT START date in UTC
 const MINT_START = Math.floor(Date.UTC(2025, 11, 3, 0, 0, 0) / 1000)
 const MINT_END = MINT_START + 7 * 24 * 60 * 60
 
 type DiscountFlags = {
   casted: boolean
+  recast: boolean
   tweeted: boolean
   followTPC: boolean
   followStar: boolean
   followChannel: boolean
+  farcasterPro: boolean
+  earlyFid: boolean
 }
 
 type DiscountVerifiedFlags = DiscountFlags
@@ -64,7 +71,7 @@ const REACTION_LABELS = [
   "I see you 🥲",
   "Aww, thanks!",
   "Oh yeah!",
-  "&nbsp;🐐&nbsp;",
+  "\u00A0🐐\u00A0",
   "🥹",
   "Woohoo!",
   "Yeehaw!",
@@ -98,19 +105,25 @@ export default function ClanktonMintPage() {
 
   const [discounts, setDiscounts] = useState<DiscountFlags>({
     casted: false,
+    recast: false,
     tweeted: false,
     followTPC: false,
     followStar: false,
     followChannel: false,
+    farcasterPro: false,
+    earlyFid: false,
   })
 
   const [discountVerified, setDiscountVerified] =
     useState<DiscountVerifiedFlags>({
       casted: false,
+      recast: false,
       tweeted: false,
       followTPC: false,
       followStar: false,
       followChannel: false,
+      farcasterPro: false,
+      earlyFid: false,
     })
 
   const [remotePrice, setRemotePrice] = useState<number | null>(null)
@@ -124,6 +137,8 @@ export default function ClanktonMintPage() {
     seconds: 0,
   })
   const [minted] = useState(0)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [requestingNotifications, setRequestingNotifications] = useState(false)
   const [showHow, setShowHow] = useState(false)
   const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({
     x: 0,
@@ -188,12 +203,52 @@ export default function ClanktonMintPage() {
     }
   }, [])
 
+  // Notification permission event listener
+  useEffect(() => {
+    if (!isMiniApp) return
+
+    const handleNotificationsEnabled = ({
+      notificationDetails,
+    }: {
+      notificationDetails: { token: string }
+    }) => {
+      console.log("[notifications] Enabled - Neynar will manage token")
+      setNotificationsEnabled(true)
+      setStatusMessage("🔔 Notifications enabled! We'll notify you when the mint is live.")
+      setRequestingNotifications(false)
+    }
+
+    const handleNotificationsDisabled = () => {
+      console.log("[notifications] Disabled")
+      setNotificationsEnabled(false)
+      setRequestingNotifications(false)
+    }
+
+    const handleMiniAppAddRejected = ({ reason }: { reason: string }) => {
+      console.log("[notifications] Add rejected:", reason)
+      setStatusMessage("Miniapp add was cancelled")
+      setRequestingNotifications(false)
+    }
+
+    sdk.on("notificationsEnabled", handleNotificationsEnabled)
+    sdk.on("notificationsDisabled", handleNotificationsDisabled)
+    sdk.on("miniAppAddRejected", handleMiniAppAddRejected)
+
+    return () => {
+      sdk.off("notificationsEnabled", handleNotificationsEnabled)
+      sdk.off("notificationsDisabled", handleNotificationsDisabled)
+      sdk.off("miniAppAddRejected", handleMiniAppAddRejected)
+    }
+  }, [isMiniApp])
+
   // ---------- AUTO-APPLY FOLLOWS FROM NEYNAR ----------
 
   type FollowsResponse = {
     followTPC: boolean
     followStar: boolean
     followChannel: boolean
+    farcasterPro: boolean
+    earlyFid: boolean
   }
 
   useEffect(() => {
@@ -212,7 +267,7 @@ export default function ClanktonMintPage() {
         }
 
         const data = (await res.json()) as FollowsResponse
-        const { followTPC, followStar, followChannel } = data
+        const { followTPC, followStar, followChannel, farcasterPro, earlyFid } = data
 
         const prev = discounts
 
@@ -221,6 +276,8 @@ export default function ClanktonMintPage() {
           followTPC: prev.followTPC || followTPC,
           followStar: prev.followStar || followStar,
           followChannel: prev.followChannel || followChannel,
+          farcasterPro: prev.farcasterPro || farcasterPro,
+          earlyFid: prev.earlyFid || earlyFid,
         }
 
         if (userAddress) {
@@ -233,6 +290,12 @@ export default function ClanktonMintPage() {
           if (!prev.followChannel && next.followChannel) {
             void registerDiscountAction(userAddress, "follow_channel")
           }
+          if (!prev.farcasterPro && next.farcasterPro) {
+            void registerDiscountAction(userAddress, "farcaster_pro")
+          }
+          if (!prev.earlyFid && next.earlyFid) {
+            void registerDiscountAction(userAddress, "early_fid")
+          }
         }
 
         setDiscounts(next)
@@ -242,6 +305,8 @@ export default function ClanktonMintPage() {
           followTPC: prevVerified.followTPC || next.followTPC,
           followStar: prevVerified.followStar || next.followStar,
           followChannel: prevVerified.followChannel || next.followChannel,
+          farcasterPro: prevVerified.farcasterPro || next.farcasterPro,
+          earlyFid: prevVerified.earlyFid || next.earlyFid,
         }))
 
         setBootstrappedFollows(true)
@@ -285,10 +350,13 @@ export default function ClanktonMintPage() {
   const localDiscount = useMemo(() => {
     let d = 0
     if (discounts.casted) d += CAST_DISCOUNT
+    if (discounts.recast) d += RECAST_DISCOUNT
     if (discounts.tweeted) d += TWEET_DISCOUNT
     if (discounts.followTPC) d += FOLLOW_DISCOUNT
     if (discounts.followStar) d += FOLLOW_DISCOUNT
     if (discounts.followChannel) d += FOLLOW_DISCOUNT
+    if (discounts.farcasterPro) d += FOLLOW_DISCOUNT
+    if (discounts.earlyFid) d += FOLLOW_DISCOUNT
     return d
   }, [discounts])
 
@@ -300,10 +368,13 @@ export default function ClanktonMintPage() {
 
   type DiscountAction =
     | "cast"
+    | "recast"
     | "tweet"
     | "follow_tpc"
     | "follow_star"
     | "follow_channel"
+    | "farcaster_pro"
+    | "early_fid"
 
   const registerDiscountAction = async (
     addr: string | null | undefined,
@@ -320,7 +391,11 @@ export default function ClanktonMintPage() {
       const res = await fetch("/api/register-discount-action", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: addr, action }),
+        body: JSON.stringify({
+          address: addr,
+          action,
+          fid: viewerFid, // Include FID for notification correlation
+        }),
       })
 
       if (!res.ok) {
@@ -351,12 +426,33 @@ export default function ClanktonMintPage() {
       }
 
       setDiscounts((p) => ({ ...p, casted: true }))
-      setStatusMessage("Farcaster opened – don’t forget to cast")
+      setStatusMessage("Farcaster opened – don't forget to cast")
       await registerDiscountAction(userAddress, "cast")
     } catch (err) {
       console.error("composeCast/open cast failed", err)
       try {
         window.open(warpcastComposeUrl, "_blank", "noopener,noreferrer")
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  const handleOpenRecastIntent = async () => {
+    try {
+      if (isMiniApp) {
+        await sdk.actions.openUrl(RECAST_TARGET_URL)
+      } else {
+        window.open(RECAST_TARGET_URL, "_blank", "noopener,noreferrer")
+      }
+
+      setDiscounts((p) => ({ ...p, recast: true }))
+      setStatusMessage("Cast opened – don't forget to recast")
+      await registerDiscountAction(userAddress, "recast")
+    } catch (err) {
+      console.error("open recast URL failed", err)
+      try {
+        window.open(RECAST_TARGET_URL, "_blank", "noopener,noreferrer")
       } catch {
         // ignore
       }
@@ -469,26 +565,35 @@ export default function ClanktonMintPage() {
 
       const serverFlags: DiscountFlags = {
         casted: data.casted ?? false,
+        recast: data.recast ?? false,
         tweeted: data.tweeted ?? false,
         followTPC: data.followTPC ?? false,
         followStar: data.followStar ?? false,
         followChannel: data.followChannel ?? false,
+        farcasterPro: data.farcasterPro ?? false,
+        earlyFid: data.earlyFid ?? false,
       }
 
       setDiscounts((prev) => ({
         casted: prev.casted || serverFlags.casted,
+        recast: prev.recast || serverFlags.recast,
         tweeted: prev.tweeted || serverFlags.tweeted,
         followTPC: prev.followTPC || serverFlags.followTPC,
         followStar: prev.followStar || serverFlags.followStar,
         followChannel: prev.followChannel || serverFlags.followChannel,
+        farcasterPro: prev.farcasterPro || serverFlags.farcasterPro,
+        earlyFid: prev.earlyFid || serverFlags.earlyFid,
       }))
 
       setDiscountVerified((prevVerified) => ({
         casted: prevVerified.casted || serverFlags.casted,
+        recast: prevVerified.recast || serverFlags.recast,
         tweeted: prevVerified.tweeted || serverFlags.tweeted,
         followTPC: prevVerified.followTPC || serverFlags.followTPC,
         followStar: prevVerified.followStar || serverFlags.followStar,
         followChannel: prevVerified.followChannel || serverFlags.followChannel,
+        farcasterPro: prevVerified.farcasterPro || serverFlags.farcasterPro,
+        earlyFid: prevVerified.earlyFid || serverFlags.earlyFid,
       }))
 
       setRemotePrice(Number(data.price))
@@ -515,6 +620,40 @@ export default function ClanktonMintPage() {
     } catch (err) {
       console.error("viewToken failed, falling back to external URL", err)
       window.open(fallbackUrl, "_blank")
+    }
+  }
+
+  const handleRequestNotifications = async () => {
+    if (!isMiniApp) {
+      setStatusMessage("Notifications are only available in the Farcaster miniapp")
+      return
+    }
+
+    if (!viewerFid) {
+      setStatusMessage("FID not available")
+      return
+    }
+
+    try {
+      setRequestingNotifications(true)
+
+      // Request to add miniapp (which can include notification permission)
+      // This will prompt the user to add the miniapp to their home screen
+      // The notification details are read from the manifest file
+      const result = await sdk.actions.addMiniApp()
+
+      // If notification details are returned, the user granted permission
+      if (result.notificationDetails) {
+        // The SDK will also emit a 'notificationsEnabled' event
+        // which we handle in a useEffect listener
+        console.log("[notifications] Granted via addMiniApp result")
+      }
+
+      setStatusMessage("Miniapp added! Check for notifications.")
+    } catch (err) {
+      console.error("Failed to add miniapp", err)
+      setStatusMessage("Failed to add miniapp")
+      setRequestingNotifications(false)
     }
   }
 
@@ -656,6 +795,12 @@ export default function ClanktonMintPage() {
                 verified={discountVerified.casted}
               />
               <DiscountPill
+                label="Recast"
+                value="-4M"
+                queued={discounts.recast && !discountVerified.recast}
+                verified={discountVerified.recast}
+              />
+              <DiscountPill
                 label="Tweet"
                 value="-1M"
                 queued={discounts.tweeted && !discountVerified.tweeted}
@@ -680,6 +825,18 @@ export default function ClanktonMintPage() {
                   discounts.followChannel && !discountVerified.followChannel
                 }
                 verified={discountVerified.followChannel}
+              />
+              <DiscountPill
+                label="FC Pro"
+                value="-500K"
+                queued={discounts.farcasterPro && !discountVerified.farcasterPro}
+                verified={discountVerified.farcasterPro}
+              />
+              <DiscountPill
+                label="FID <100K"
+                value="-500K"
+                queued={discounts.earlyFid && !discountVerified.earlyFid}
+                verified={discountVerified.earlyFid}
               />
             </div>
           </div>
@@ -711,7 +868,7 @@ export default function ClanktonMintPage() {
           <ActionRow
             icon={
               <div className="h-full w-full flex items-center justify-center bg-black text-white rounded-full">
-                <span className="text-lg font-bold">𝕏</span>
+                <span className="text-lg">𝕏</span>
               </div>
             }
             title="Tweet about this mint"
@@ -720,6 +877,16 @@ export default function ClanktonMintPage() {
             badge="1M OFF!"
             onClick={handleOpenTweetIntent}
             done={discounts.tweeted}
+          />
+
+          <ActionRow
+            icon={<Avatar src="/farcaster.jpg" alt="Farcaster" />}
+            title="Recast the announcement"
+            description="Recast @starl3xx's announcement post for a 4,000,000 CLANKTON discount"
+            ctaLabel="Recast"
+            badge="4M OFF!"
+            onClick={handleOpenRecastIntent}
+            done={discounts.recast}
           />
 
           <ActionRow
@@ -754,6 +921,28 @@ export default function ClanktonMintPage() {
             done={discounts.followChannel}
           />
 
+          {/* Half-width non-actionable discount cards */}
+          <div className="grid grid-cols-2 gap-3">
+            <StatusCard
+              icon={<Avatar src="/fc-pro.png" alt="Farcaster Pro" />}
+              title="Farcaster Pro"
+              description="Burn your hard-earned money, get a 500,000 CLANKTON discount"
+              badge="500K OFF!"
+              active={discounts.farcasterPro}
+            />
+            <StatusCard
+              icon={<Avatar src="/fc-og.png" alt="Early FID" />}
+              title="FID < 100K"
+              description={
+                <>
+                  The early <s>bird</s> Warplet gets the 500,000 CLANKTON discount
+                </>
+              }
+              badge="500K OFF!"
+              active={discounts.earlyFid}
+            />
+          </div>
+
           <button
             className="w-full text-xs rounded-xl border border-white/35 bg-white/15 px-3 py-2 text-white hover:bg-white/20 transition disabled:opacity-60"
             onClick={refreshDiscountsFromServer}
@@ -761,6 +950,22 @@ export default function ClanktonMintPage() {
           >
             {loading ? "Refreshing…" : "🔄 Refresh discounts (server)"}
           </button>
+
+          {/* Notification permission button */}
+          {isMiniApp && !notificationsEnabled && (
+            <button
+              className="w-full text-xs rounded-xl border border-[#C9FF5B]/50 bg-[#C9FF5B]/10 px-3 py-2 text-[#C9FF5B] hover:bg-[#C9FF5B]/20 transition disabled:opacity-60"
+              onClick={handleRequestNotifications}
+              disabled={requestingNotifications}
+            >
+              {requestingNotifications ? "Requesting…" : "🔔 Get notified when mint is live"}
+            </button>
+          )}
+          {notificationsEnabled && (
+            <div className="w-full text-xs rounded-xl border border-[#C9FF5B]/50 bg-[#C9FF5B]/10 px-3 py-2 text-[#C9FF5B] text-center">
+              ✅ Notifications enabled
+            </div>
+          )}
         </div>
 
         {/* Mint + Buy buttons */}
@@ -780,7 +985,7 @@ export default function ClanktonMintPage() {
           </button>
 
           <button
-            className="w-full rounded-2xl border border-white/35 bg:white/15 text-sm px-4 py-3 text-center text-white hover:bg-white/20 transition"
+            className="w-full rounded-2xl bg-white text-[#33264D] text-sm px-4 py-3 text-center font-semibold hover:bg-[#C9FF5B] transition"
             onClick={handleBuyClankton}
           >
             {buyClanktonLabel}
@@ -797,7 +1002,8 @@ export default function ClanktonMintPage() {
             <span className="text-white/70">{showHow ? "−" : "+"}</span>
           </button>
           {showHow && (
-            <div className="px-4 pb-3 text-xs text-white/80 space-y-2">
+            <div className="px-4 pb-3 pt-3 text-xs text-white/80 space-y-2">
+              <div className="border-t border-white/15 w-4/5 mx-auto mb-3"></div>
               <p>
                 ✪ When the mint goes live, anyone can mint an NFT until all 50
                 editions are sold out. There is no whitelist or allowlist.
@@ -1024,7 +1230,7 @@ function ActionRow(props: {
     <div className="relative rounded-3xl border border-white/20 bg-[#6E6099] p-3 flex items-center gap-3 shadow-[0_0_18px_rgba(255,255,255,0.14)]">
       {props.badge && (
         <div className="absolute -top-2 -left-1 origin-top-left -rotate-6">
-          <div className="bg-[#C9FF5B] text-[#33264D] text-[0.6rem] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60">
+          <div className={`bg-[#C9FF5B] text-[#33264D] text-[0.6rem] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60 ${props.badge === "4M OFF!" ? "animate-sparkle" : ""}`}>
             {props.badge}
           </div>
         </div>
@@ -1063,6 +1269,41 @@ function ActionRow(props: {
       >
         {props.ctaLabel}
       </button>
+    </div>
+  )
+}
+
+function StatusCard(props: {
+  icon?: ReactNode
+  title: string
+  description: string | ReactNode
+  badge?: string
+  active: boolean
+}) {
+  return (
+    <div className="relative rounded-3xl border border-white/20 bg-[#6E6099] p-3 flex flex-col gap-2 shadow-[0_0_18px_rgba(255,255,255,0.14)]">
+      {props.badge && (
+        <div className="absolute -top-2 -left-1 origin-top-left -rotate-6">
+          <div className="bg-[#C9FF5B] text-[#33264D] text-[0.6rem] font-semibold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.45)] border border-white/60">
+            {props.badge}
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        {props.icon && (
+          <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center border border-white/30 overflow-hidden shrink-0">
+            {props.icon}
+          </div>
+        )}
+        <div className="flex-1">
+          <div className="text-sm font-medium">{props.title}</div>
+        </div>
+        {props.active && (
+          <span className="text-lg trophy-glow">🏆</span>
+        )}
+      </div>
+      <div className="text-xs text-white/80">{props.description}</div>
     </div>
   )
 }

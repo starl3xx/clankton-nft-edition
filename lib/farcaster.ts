@@ -91,6 +91,9 @@ const CLANKTON_CHANNEL_ID = "clankton" as const
 
 type NeynarBulkUser = {
   fid: number
+  pro?: {
+    status?: string
+  }
   viewer_context?: {
     following?: boolean
   }
@@ -112,6 +115,8 @@ export type ViewerFollowStatus = {
   followTPC: boolean
   followStar: boolean
   followChannel: boolean
+  farcasterPro: boolean
+  earlyFid: boolean
 }
 
 // ---- Internal helpers ----------------------------------------------
@@ -139,6 +144,8 @@ function assertValidFid(fid: number, label: string = "fid"): void {
  * - follows @thepapercrane
  * - follows @starl3xx.eth (or IS starl3xx)
  * - is a member of /clankton
+ * - has Farcaster Pro
+ * - has FID < 100,000
  */
 export async function getViewerFollowStatus(
   viewerFid: number,
@@ -174,6 +181,7 @@ export async function getViewerFollowStatus(
 
   const tpcUser = usersByFid.get(PAPERCRANE_FID)
   const starUser = usersByFid.get(STARL3XX_FID)
+  const viewerUser = usersByFid.get(viewerFid)
 
   const followTPC = tpcUser?.viewer_context?.following === true
 
@@ -185,6 +193,12 @@ export async function getViewerFollowStatus(
   const followChannel =
     Array.isArray(channel?.channels) &&
     channel.channels.some((ch) => ch.id === CLANKTON_CHANNEL_ID)
+
+  // Check if user has Farcaster Pro (pro.status === "subscribed" indicates pro subscription)
+  const farcasterPro = viewerUser?.pro?.status === "subscribed"
+
+  // Check if FID is less than 100,000 (early adopter)
+  const earlyFid = viewerFid < 100_000
 
   console.info("[farcaster] bulk follow status", {
     viewerFid,
@@ -200,9 +214,17 @@ export async function getViewerFollowStatus(
     followChannel,
   })
 
+  console.info("[farcaster] pro and early FID status", {
+    viewerFid,
+    farcasterPro,
+    earlyFid,
+  })
+
   return {
     followTPC,
     followStar,
     followChannel,
+    farcasterPro,
+    earlyFid,
   }
 }

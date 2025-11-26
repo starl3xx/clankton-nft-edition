@@ -8,10 +8,13 @@ export const runtime = "nodejs"
 
 type DbRow = {
   casted: boolean | null
+  recast: boolean | null
   tweeted: boolean | null
   follow_tpc: boolean | null
   follow_star: boolean | null
   follow_channel: boolean | null
+  farcaster_pro: boolean | null
+  early_fid: boolean | null
 }
 
 function isValidEthAddress(addr: string): boolean {
@@ -42,7 +45,7 @@ export async function POST(req: NextRequest) {
     const normalized = address.toLowerCase()
 
     const result = await sql<DbRow>`
-      SELECT casted, tweeted, follow_tpc, follow_star, follow_channel
+      SELECT casted, recast, tweeted, follow_tpc, follow_star, follow_channel, farcaster_pro, early_fid
       FROM clankton_discounts
       WHERE address = ${normalized}
       LIMIT 1;
@@ -52,10 +55,13 @@ export async function POST(req: NextRequest) {
 
     const flags: DiscountFlags = {
       casted: !!row?.casted,
+      recast: !!row?.recast,
       tweeted: !!row?.tweeted,
       followTPC: !!row?.follow_tpc,
       followStar: !!row?.follow_star,
       followChannel: !!row?.follow_channel,
+      farcasterPro: !!row?.farcaster_pro,
+      earlyFid: !!row?.early_fid,
     }
 
     const price = computePrice(flags)

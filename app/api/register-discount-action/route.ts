@@ -7,23 +7,29 @@ export const runtime = "nodejs"
 
 type Action =
   | "cast"
+  | "recast"
   | "tweet"
   | "follow_tpc"
   | "follow_star"
   | "follow_channel"
+  | "farcaster_pro"
+  | "early_fid"
 
 type DbRow = {
   casted: boolean | null
+  recast: boolean | null
   tweeted: boolean | null
   follow_tpc: boolean | null
   follow_star: boolean | null
   follow_channel: boolean | null
+  farcaster_pro: boolean | null
+  early_fid: boolean | null
 }
 
 // Fetch current summary row
 async function getSummaryRow(address: string): Promise<DbRow | null> {
   const result = await sql<DbRow>`
-    SELECT casted, tweeted, follow_tpc, follow_star, follow_channel
+    SELECT casted, recast, tweeted, follow_tpc, follow_star, follow_channel, farcaster_pro, early_fid
     FROM clankton_discounts
     WHERE address = ${address}
     LIMIT 1;
@@ -37,6 +43,7 @@ export async function POST(req: NextRequest) {
 
     const address = typeof body?.address === "string" ? body.address : null
     const action = body?.action as Action | undefined
+    const fid = typeof body?.fid === "number" ? String(body.fid) : null
 
     if (!address || !action) {
       console.warn("[register-discount-action] missing address or action", {
@@ -55,8 +62,8 @@ export async function POST(req: NextRequest) {
     // 1) Insert into event table (idempotent)
     // -------------------------------
     await sql`
-      INSERT INTO clankton_discount_actions (address, action)
-      VALUES (${normalized}, ${action})
+      INSERT INTO clankton_discount_actions (address, action, fid)
+      VALUES (${normalized}, ${action}, ${fid})
       ON CONFLICT (address, action) DO NOTHING;
     `
 
@@ -65,51 +72,69 @@ export async function POST(req: NextRequest) {
     // -------------------------------
     const current = (await getSummaryRow(normalized)) ?? {
       casted: false,
+      recast: false,
       tweeted: false,
       follow_tpc: false,
       follow_star: false,
       follow_channel: false,
+      farcaster_pro: false,
+      early_fid: false,
     }
 
     const next: DbRow = {
       casted: current.casted ?? false,
+      recast: current.recast ?? false,
       tweeted: current.tweeted ?? false,
       follow_tpc: current.follow_tpc ?? false,
       follow_star: current.follow_star ?? false,
       follow_channel: current.follow_channel ?? false,
+      farcaster_pro: current.farcaster_pro ?? false,
+      early_fid: current.early_fid ?? false,
     }
 
     // Flip the matching boolean
     if (action === "cast") next.casted = true
+    if (action === "recast") next.recast = true
     if (action === "tweet") next.tweeted = true
     if (action === "follow_tpc") next.follow_tpc = true
     if (action === "follow_star") next.follow_star = true
     if (action === "follow_channel") next.follow_channel = true
+    if (action === "farcaster_pro") next.farcaster_pro = true
+    if (action === "early_fid") next.early_fid = true
 
     // Summary-table upsert
     await sql`
       INSERT INTO clankton_discounts (
         address,
         casted,
+        recast,
         tweeted,
         follow_tpc,
         follow_star,
-        follow_channel
+        follow_channel,
+        farcaster_pro,
+        early_fid
       )
       VALUES (
         ${normalized},
         ${next.casted},
+        ${next.recast},
         ${next.tweeted},
         ${next.follow_tpc},
         ${next.follow_star},
-        ${next.follow_channel}
+        ${next.follow_channel},
+        ${next.farcaster_pro},
+        ${next.early_fid}
       )
       ON CONFLICT (address) DO UPDATE SET
         casted         = clankton_discounts.casted         OR EXCLUDED.casted,
+        recast         = clankton_discounts.recast         OR EXCLUDED.recast,
         tweeted        = clankton_discounts.tweeted        OR EXCLUDED.tweeted,
         follow_tpc     = clankton_discounts.follow_tpc     OR EXCLUDED.follow_tpc,
         follow_star    = clankton_discounts.follow_star    OR EXCLUDED.follow_star,
         follow_channel = clankton_discounts.follow_channel OR EXCLUDED.follow_channel,
+        farcaster_pro  = clankton_discounts.farcaster_pro  OR EXCLUDED.farcaster_pro,
+        early_fid      = clankton_discounts.early_fid      OR EXCLUDED.early_fid,
         updated_at     = now();
     `
 

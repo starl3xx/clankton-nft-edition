@@ -65,3 +65,28 @@ body {
     transform: translateX(140%);
   }
 }
+
+/* Sparkle animation for discount badges */
+@keyframes sparkle {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.45),
+                0 0 15px rgba(201, 255, 91, 0.4),
+                0 0 20px rgba(201, 255, 91, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.45),
+                0 0 25px rgba(201, 255, 91, 0.7),
+                0 0 35px rgba(201, 255, 91, 0.4),
+                0 0 45px rgba(201, 255, 91, 0.2);
+  }
+}
+
+.animate-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+/* Subtle white shadow for trophy emojis */
+.trophy-glow {
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.3))
+          drop-shadow(0 0 6px rgba(255, 255, 255, 0.2));
+}

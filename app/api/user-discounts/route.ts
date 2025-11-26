@@ -5,37 +5,37 @@ import {
   computePrice,
   type DiscountFlags,
 } from "@/app/lib/pricing"
+import { apiError } from "@/lib/api"
 
 export const runtime = "nodejs"
 
 type DbRow = {
   casted: boolean | null
+  recast: boolean | null
   tweeted: boolean | null
   follow_tpc: boolean | null
   follow_star: boolean | null
   follow_channel: boolean | null
+  farcaster_pro: boolean | null
+  early_fid: boolean | null
 }
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address")
 
-return apiError(
-  "USER_DISCOUNTS_MISSING_ADDRESS",
-  "Missing or invalid wallet address",
-  400,
-)
-
-return apiError(
-  "USER_DISCOUNTS_INTERNAL_ERROR",
-  "Couldn’t load your discounts right now",
-  500,
-)
+  if (!address) {
+    return apiError(
+      "USER_DISCOUNTS_MISSING_ADDRESS",
+      "Missing or invalid wallet address",
+      400,
+    )
+  }
 
   const normalized = address.toLowerCase()
 
   try {
     const result = await sql<DbRow>`
-      SELECT casted, tweeted, follow_tpc, follow_star, follow_channel
+      SELECT casted, recast, tweeted, follow_tpc, follow_star, follow_channel, farcaster_pro, early_fid
       FROM clankton_discounts
       WHERE address = ${normalized}
       LIMIT 1;
@@ -45,10 +45,13 @@ return apiError(
 
     const flags: DiscountFlags = {
       casted: !!row?.casted,
+      recast: !!row?.recast,
       tweeted: !!row?.tweeted,
       followTPC: !!row?.follow_tpc,
       followStar: !!row?.follow_star,
       followChannel: !!row?.follow_channel,
+      farcasterPro: !!row?.farcaster_pro,
+      earlyFid: !!row?.early_fid,
     }
 
     const price = computePrice(flags)
@@ -64,10 +67,13 @@ return apiError(
     // Safe fallback: no discounts, just base price
     const flags: DiscountFlags = {
       casted: false,
+      recast: false,
       tweeted: false,
       followTPC: false,
       followStar: false,
       followChannel: false,
+      farcasterPro: false,
+      earlyFid: false,
     }
 
     const price = computePrice(flags)
