@@ -91,10 +91,21 @@ forge test --gas-report
 forge test --match-test testMint
 ```
 
-## Verification
+## Verification on Basescan
 
-After deployment, verify on Basescan:
+Contract verification is important for transparency and user trust. Here are detailed steps:
+
+### Prerequisites
+1. Get a Basescan API key from [basescan.org](https://basescan.org/apis)
+2. Add to your `.env`: `BASESCAN_API_KEY=your_api_key`
+
+### Method 1: Verify with Forge (Recommended)
+
 ```bash
+# Set your API key
+export BASESCAN_API_KEY=your_api_key
+
+# Verify the contract
 forge verify-contract \
   <CONTRACT_ADDRESS> \
   contracts/ClanktonNFT.sol:ClanktonNFT \
@@ -105,6 +116,61 @@ forge verify-contract \
     1764720000 \
     1765324800 \
     "https://clankton-nft-edition.vercel.app/api/metadata/")
+```
+
+### Method 2: Verify on Basescan Web UI
+
+1. Go to [basescan.org](https://basescan.org) and search for your contract address
+2. Click "Contract" tab → "Verify and Publish"
+3. Select:
+   - Compiler Type: `Solidity (Single file)`
+   - Compiler Version: `v0.8.20`
+   - License: `MIT`
+4. Flatten your contract first:
+   ```bash
+   forge flatten contracts/ClanktonNFT.sol > ClanktonNFT_flattened.sol
+   ```
+5. Paste the flattened source code
+6. Enter constructor arguments (ABI-encoded):
+   ```bash
+   # Generate ABI-encoded constructor args
+   cast abi-encode "constructor(address,address,uint256,uint256,string)" \
+     0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07 \
+     <SIGNER_ADDRESS> \
+     <MINT_START_TIMESTAMP> \
+     <MINT_END_TIMESTAMP> \
+     "https://clankton-nft-edition.vercel.app/api/metadata/"
+   ```
+
+### Method 3: Verify on Base Sepolia (Testnet)
+
+```bash
+forge verify-contract \
+  <CONTRACT_ADDRESS> \
+  contracts/ClanktonNFT.sol:ClanktonNFT \
+  --chain base-sepolia \
+  --verifier-url https://api-sepolia.basescan.org/api \
+  --constructor-args $(cast abi-encode "constructor(address,address,uint256,uint256,string)" \
+    <TESTNET_CLANKTON_ADDRESS> \
+    $SIGNER_ADDRESS \
+    <MINT_START> \
+    <MINT_END> \
+    "https://clankton-nft-edition.vercel.app/api/metadata/")
+```
+
+### Troubleshooting Verification
+
+**Error: "Unable to verify"**
+- Ensure compiler version matches exactly (`0.8.20`)
+- Check optimizer settings match (default: 200 runs)
+- Verify constructor args are ABI-encoded correctly
+
+**Error: "Invalid API Key"**
+- Get a new API key from [basescan.org/myapikey](https://basescan.org/myapikey)
+
+**Check verification status**
+```bash
+forge verify-check <GUID> --chain base
 ```
 
 ## Admin Functions

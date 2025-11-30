@@ -11,6 +11,7 @@ import type React from "react"
 import Image from "next/image"
 import { useAccount, useBalance, useConnect } from "wagmi"
 import { sdk } from "@farcaster/miniapp-sdk"
+import { parseApiError, safeFetch } from "@/lib/errors"
 
 const BASE_PRICE = 20_000_000
 const CAST_DISCOUNT = 2_000_000
@@ -58,13 +59,6 @@ type MintState = {
   hours: number
   minutes: number
   seconds: number
-}
-
-type ApiErrorPayload = {
-  ok?: boolean
-  code?: string
-  message?: string
-  error?: string
 }
 
 const REACTION_LABELS = [
@@ -509,65 +503,64 @@ export default function ClanktonMintPage() {
     setLoading(true)
     setStatusMessage(null)
 
-    try {
-      const res = await fetch(`/api/user-discounts?address=${userAddress}`)
-      if (!res.ok) {
-        let errPayload: ApiErrorPayload | null = null
-        try {
-          errPayload = (await res.json()) as ApiErrorPayload
-        } catch {
-          // ignore JSON parse error
-        }
-        const msg =
-          errPayload?.message ||
-          errPayload?.error ||
-          "Could not refresh discounts"
-        setStatusMessage(msg)
-        return
-      }
-
-      const data = await res.json()
-
-      const serverFlags: DiscountFlags = {
-        casted: data.casted ?? false,
-        recast: data.recast ?? false,
-        tweeted: data.tweeted ?? false,
-        followTPC: data.followTPC ?? false,
-        followStar: data.followStar ?? false,
-        followChannel: data.followChannel ?? false,
-        farcasterPro: data.farcasterPro ?? false,
-        earlyFid: data.earlyFid ?? false,
-      }
-
-      setDiscounts((prev) => ({
-        casted: prev.casted || serverFlags.casted,
-        recast: prev.recast || serverFlags.recast,
-        tweeted: prev.tweeted || serverFlags.tweeted,
-        followTPC: prev.followTPC || serverFlags.followTPC,
-        followStar: prev.followStar || serverFlags.followStar,
-        followChannel: prev.followChannel || serverFlags.followChannel,
-        farcasterPro: prev.farcasterPro || serverFlags.farcasterPro,
-        earlyFid: prev.earlyFid || serverFlags.earlyFid,
-      }))
-
-      setDiscountVerified((prevVerified) => ({
-        casted: prevVerified.casted || serverFlags.casted,
-        recast: prevVerified.recast || serverFlags.recast,
-        tweeted: prevVerified.tweeted || serverFlags.tweeted,
-        followTPC: prevVerified.followTPC || serverFlags.followTPC,
-        followStar: prevVerified.followStar || serverFlags.followStar,
-        followChannel: prevVerified.followChannel || serverFlags.followChannel,
-        farcasterPro: prevVerified.farcasterPro || serverFlags.farcasterPro,
-        earlyFid: prevVerified.earlyFid || serverFlags.earlyFid,
-      }))
-
-      setRemotePrice(Number(data.price))
-      setStatusMessage("Discounts synced with server")
-    } catch {
-      setStatusMessage("Could not refresh discounts")
-    } finally {
-      setLoading(false)
+    type DiscountsResponse = {
+      price: number
+      casted?: boolean
+      recast?: boolean
+      tweeted?: boolean
+      followTPC?: boolean
+      followStar?: boolean
+      followChannel?: boolean
+      farcasterPro?: boolean
+      earlyFid?: boolean
     }
+
+    const { data, error } = await safeFetch<DiscountsResponse>(
+      `/api/user-discounts?address=${userAddress}`
+    )
+
+    if (error || !data) {
+      setStatusMessage(error || "Could not refresh discounts")
+      setLoading(false)
+      return
+    }
+
+    const serverFlags: DiscountFlags = {
+      casted: data.casted ?? false,
+      recast: data.recast ?? false,
+      tweeted: data.tweeted ?? false,
+      followTPC: data.followTPC ?? false,
+      followStar: data.followStar ?? false,
+      followChannel: data.followChannel ?? false,
+      farcasterPro: data.farcasterPro ?? false,
+      earlyFid: data.earlyFid ?? false,
+    }
+
+    setDiscounts((prev) => ({
+      casted: prev.casted || serverFlags.casted,
+      recast: prev.recast || serverFlags.recast,
+      tweeted: prev.tweeted || serverFlags.tweeted,
+      followTPC: prev.followTPC || serverFlags.followTPC,
+      followStar: prev.followStar || serverFlags.followStar,
+      followChannel: prev.followChannel || serverFlags.followChannel,
+      farcasterPro: prev.farcasterPro || serverFlags.farcasterPro,
+      earlyFid: prev.earlyFid || serverFlags.earlyFid,
+    }))
+
+    setDiscountVerified((prevVerified) => ({
+      casted: prevVerified.casted || serverFlags.casted,
+      recast: prevVerified.recast || serverFlags.recast,
+      tweeted: prevVerified.tweeted || serverFlags.tweeted,
+      followTPC: prevVerified.followTPC || serverFlags.followTPC,
+      followStar: prevVerified.followStar || serverFlags.followStar,
+      followChannel: prevVerified.followChannel || serverFlags.followChannel,
+      farcasterPro: prevVerified.farcasterPro || serverFlags.farcasterPro,
+      earlyFid: prevVerified.earlyFid || serverFlags.earlyFid,
+    }))
+
+    setRemotePrice(Number(data.price))
+    setStatusMessage("Discounts synced ✓")
+    setLoading(false)
   }
 
   const handleBuyClankton = async () => {
@@ -605,38 +598,33 @@ export default function ClanktonMintPage() {
     setLoading(true)
     setStatusMessage("Preparing your mint…")
 
-    try {
-      const res = await fetch("/api/mint-request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: userAddress }),
-      })
+    // Step 1: Get mint signature from backend
+    const { data: sigData, error: sigError } = await safeFetch<{
+      price: string
+      nonce: number
+      deadline: number
+      signature: string
+      humanReadablePrice: string
+    }>("/api/mint-signature", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: userAddress }),
+    })
 
-      if (!res.ok) {
-        let errPayload: ApiErrorPayload | null = null
-        try {
-          errPayload = (await res.json()) as ApiErrorPayload
-        } catch {
-          // ignore JSON parse
-        }
-        const msg =
-          errPayload?.message ||
-          errPayload?.error ||
-          "Mint failed – try again"
-        setStatusMessage(msg)
-        return
-      }
-
-      await res.json()
-
-      await new Promise((resolve) => setTimeout(resolve, 1200))
-
-      setStatusMessage("Mint successful – you’re now a CLANKTON enjoyooor")
-    } catch {
-      setStatusMessage("Mint failed – try again")
-    } finally {
+    if (sigError || !sigData) {
+      setStatusMessage(sigError || "Could not prepare mint. Please try again.")
       setLoading(false)
+      return
     }
+
+    setStatusMessage(`Price: ${sigData.humanReadablePrice}. Confirm in wallet…`)
+
+    // TODO: Step 2 - Call smart contract to mint
+    // For now, simulate the mint process
+    await new Promise((resolve) => setTimeout(resolve, 1200))
+
+    setStatusMessage("Mint successful – you're now a CLANKTON enjoyooor 🎉")
+    setLoading(false)
   }
 
   const handleArtMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
