@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { sql } from "@vercel/postgres"
 import { ethers } from "ethers"
 import { apiError } from "@/lib/api"
+import { rateLimit } from "@/lib/rate-limit"
 
 function isValidEthAddress(addr: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(addr)
@@ -17,7 +18,31 @@ function isValidEthAddress(addr: string): boolean {
  * will verify this signature before allowing the mint.
  */
 export async function POST(req: NextRequest) {
-  // TODO: optional rate limit
+  // IP-based rate limiting - stricter for signature generation
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown"
+
+  try {
+    const { isLimited } = await rateLimit({
+      key: `mint-signature:${ip}`,
+      limit: 10, // 10 requests (stricter - signatures are expensive)
+      window: 60_000, // per 60 seconds
+    })
+
+    if (isLimited) {
+      return apiError(
+        "MINT_SIG_RATE_LIMITED",
+        "Too many signature requests, please try again shortly",
+        429,
+      )
+    }
+  } catch (e) {
+    // If rate limiter fails, log but don't block the user
+    console.error("[mint-signature] rateLimit error", e)
+  }
+
   try {
     const body = await req.json().catch(() => null)
     const address = typeof body?.address === "string" ? body.address : null
