@@ -49,9 +49,15 @@ export const metadata: Metadata = {
       iconUrl: `${appUrl}/icon.png`,
       homeUrl: appUrl,
       imageUrl: `${appUrl}/image.png`,
-      buttonTitle: "Open mini app",
-      splashImageUrl: `${appUrl}/splash.png`,
-      splashBackgroundColor: "#8F80AA",
+      button: {
+        title: "Open mini app",
+        action: {
+          type: "launch_miniapp",
+          url: appUrl,
+          splashImageUrl: `${appUrl}/splash.png`,
+          splashBackgroundColor: "#8F80AA",
+        },
+      },
     }),
   },
 }
