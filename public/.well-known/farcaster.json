@@ -1,23 +1,29 @@
 {
-  "accountAssociation": {
-    "header": "eyJmaWQiOjI0OTk1OCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAifQ",
-    "payload": "eyJkb21haW4iOiJjbGFua3Rvbi1uZnQtZWRpdGlvbi52ZXJjZWwuYXBwIn0",
-    "signature": "MHg..."
-  },
-  "miniapp": {
+  "frame": {
+    "name": ""Clankton Town" Mint",
     "version": "1",
-    "name": "thepapercrane × $CLANKTON NFT mint",
-    "description": "Mint thepapercrane × $CLANKTON NFT with social discounts",
-    "iconUrl": "https://clankton-nft-edition.vercel.app/clankton-purple.png",
+    "iconUrl": "https://clankton-nft-edition.vercel.app/icon.png",
     "homeUrl": "https://clankton-nft-edition.vercel.app",
-    "canonicalDomain": "clankton-nft-edition.vercel.app",
-    "webhookUrl": "https://api.neynar.com/f/app/635f0c3e-11b4-4659-935c-7157ad15390e/event",
-    "requiredChains": ["eip155:8453"],
-    "requiredCapabilities": ["actions.ready", "actions.composeCast", "actions.viewProfile", "actions.viewToken", "actions.openUrl"],
-    "notificationDetails": {
-      "title": "CLANKTON Mint Alerts",
-      "body": "Get notified when the mint goes live",
-      "url": "https://clankton-nft-edition.vercel.app"
-    }
+    "buttonTitle": "Open mini app",
+    "splashImageUrl": "https://clankton-nft-edition.vercel.app/splash.png",
+    "splashBackgroundColor": "#8F80AA",
+    "webhookUrl": "https://clankton-nft-edition.vercel.app/api/webhook",
+    "subtitle": "Limited-edition $CLANKTON NFT",
+    "description": "Lock in your discount for the upcoming mint of "Clankton Town," a stunning 50-edition NFT by the legend @thepapercrane and payable in $CLANKTON",
+    "primaryCategory": "art-creativity",
+    "screenshotUrls": [
+      "https://clankton-nft-edition.vercel.app/screenshot1.png"
+    ],
+    "heroImageUrl": "https://clankton-nft-edition.vercel.app/hero.png",
+    "tagline": "Lock in your mint discount!",
+    "ogTitle": ""Clankton Town" NFT Mint",
+    "ogDescription": "Lock in your discount for "Clankton Town," a 50-edition NFT by thepapercrane payable in CLANKTON",
+    "ogImageUrl": "https://clankton-nft-edition.vercel.app/hero.png",
+    "castShareUrl": "https://warpcast.com/~/compose?text=Locked%20in%20my%20%24CLANKTON%20discounts%20for%20the%20limited-edition%20%E2%80%9CClankton%20Town%E2%80%9D%20NFT%20by%20%40thepapercrane%20%E2%9C%A8%20Only%2050%20available%20%E2%80%94%20mint%20opens%20soon!%20%F0%9F%8E%A8&embeds=https://clankton-nft-edition.vercel.app"
+  },
+  "accountAssociation": {
+    "header": "eyJmaWQiOjY1MDAsInR5cGUiOiJhdXRoIiwia2V5IjoiMHgzQ2VlNjMwMDc1REM1ODZENUJGZEZBODFGM2EyZDc3OTgwRjBkMjIzIn0",
+    "payload": "eyJkb21haW4iOiJjbGFua3Rvbi1uZnQtZWRpdGlvbi52ZXJjZWwuYXBwIn0",
+    "signature": "5QmJm/PkSGmreRyjeqFiDg5D8atERX5H85QhHDr6aBI1JlJz9GTwdK/gb4zrLnfkNFs//nWpY5Rp81oGSKONKRw="
   }
 }
