@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sql } from "@vercel/postgres"
 import { apiError } from "@/lib/api"
+import { rateLimit } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 
@@ -57,7 +58,31 @@ async function getSummaryRow(address: string): Promise<DbRow | null> {
 }
 
 export async function POST(req: NextRequest) {
-  // TODO: optional rate limit
+  // IP-based rate limiting to prevent abuse
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown"
+
+  try {
+    const { isLimited } = await rateLimit({
+      key: `register-discount:${ip}`,
+      limit: 60, // 60 requests
+      window: 60_000, // per 60 seconds
+    })
+
+    if (isLimited) {
+      return apiError(
+        "DISCOUNT_RATE_LIMITED",
+        "Too many requests, please try again shortly",
+        429,
+      )
+    }
+  } catch (e) {
+    // If rate limiter fails, log but don't block the user
+    console.error("[register-discount-action] rateLimit error", e)
+  }
+
   try {
     const body = await req.json().catch(() => null)
 

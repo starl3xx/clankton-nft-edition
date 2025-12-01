@@ -6,6 +6,7 @@ import {
   type DiscountFlags,
 } from "@/app/lib/pricing"
 import { apiError } from "@/lib/api"
+import { rateLimit } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 
@@ -25,7 +26,31 @@ type DbRow = {
 }
 
 export async function GET(req: NextRequest) {
-  // TODO: optional rate limit
+  // IP-based rate limiting to prevent abuse
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown"
+
+  try {
+    const { isLimited } = await rateLimit({
+      key: `user-discounts:${ip}`,
+      limit: 60, // 60 requests
+      window: 60_000, // per 60 seconds
+    })
+
+    if (isLimited) {
+      return apiError(
+        "USER_DISCOUNTS_RATE_LIMITED",
+        "Too many requests, please try again shortly",
+        429,
+      )
+    }
+  } catch (e) {
+    // If rate limiter fails, log but don't block the user
+    console.error("[user-discounts] rateLimit error", e)
+  }
+
   const address = req.nextUrl.searchParams.get("address")
 
   if (!address) {

@@ -11,6 +11,7 @@ import type React from "react"
 import Image from "next/image"
 import { useAccount, useBalance, useConnect } from "wagmi"
 import { sdk } from "@farcaster/miniapp-sdk"
+import { parseApiError, safeFetch } from "@/lib/errors"
 
 const BASE_PRICE = 20_000_000
 const CAST_DISCOUNT = 2_000_000
@@ -32,9 +33,9 @@ const STARL3XX_FID = 6_500 as number
 // Recast target cast URL (update this once the mini app is live)
 const RECAST_TARGET_URL = "https://warpcast.com/starl3xx.eth/0xe514b0c0"
 
-// MINT START date in UTC
-const MINT_START = Math.floor(Date.UTC(2025, 11, 3, 0, 0, 0) / 1000)
-const MINT_END = MINT_START + 7 * 24 * 60 * 60
+// MINT START date in UTC - December 16, 2025 at 17:00 UTC
+// Mint stays open until all 50 editions are sold (no time-based end)
+const MINT_START = Math.floor(Date.UTC(2025, 11, 16, 17, 0, 0) / 1000)
 
 type DiscountFlags = {
   casted: boolean
@@ -58,13 +59,6 @@ type MintState = {
   hours: number
   minutes: number
   seconds: number
-}
-
-type ApiErrorPayload = {
-  ok?: boolean
-  code?: string
-  message?: string
-  error?: string
 }
 
 const REACTION_LABELS = [
@@ -509,65 +503,64 @@ export default function ClanktonMintPage() {
     setLoading(true)
     setStatusMessage(null)
 
-    try {
-      const res = await fetch(`/api/user-discounts?address=${userAddress}`)
-      if (!res.ok) {
-        let errPayload: ApiErrorPayload | null = null
-        try {
-          errPayload = (await res.json()) as ApiErrorPayload
-        } catch {
-          // ignore JSON parse error
-        }
-        const msg =
-          errPayload?.message ||
-          errPayload?.error ||
-          "Could not refresh discounts"
-        setStatusMessage(msg)
-        return
-      }
-
-      const data = await res.json()
-
-      const serverFlags: DiscountFlags = {
-        casted: data.casted ?? false,
-        recast: data.recast ?? false,
-        tweeted: data.tweeted ?? false,
-        followTPC: data.followTPC ?? false,
-        followStar: data.followStar ?? false,
-        followChannel: data.followChannel ?? false,
-        farcasterPro: data.farcasterPro ?? false,
-        earlyFid: data.earlyFid ?? false,
-      }
-
-      setDiscounts((prev) => ({
-        casted: prev.casted || serverFlags.casted,
-        recast: prev.recast || serverFlags.recast,
-        tweeted: prev.tweeted || serverFlags.tweeted,
-        followTPC: prev.followTPC || serverFlags.followTPC,
-        followStar: prev.followStar || serverFlags.followStar,
-        followChannel: prev.followChannel || serverFlags.followChannel,
-        farcasterPro: prev.farcasterPro || serverFlags.farcasterPro,
-        earlyFid: prev.earlyFid || serverFlags.earlyFid,
-      }))
-
-      setDiscountVerified((prevVerified) => ({
-        casted: prevVerified.casted || serverFlags.casted,
-        recast: prevVerified.recast || serverFlags.recast,
-        tweeted: prevVerified.tweeted || serverFlags.tweeted,
-        followTPC: prevVerified.followTPC || serverFlags.followTPC,
-        followStar: prevVerified.followStar || serverFlags.followStar,
-        followChannel: prevVerified.followChannel || serverFlags.followChannel,
-        farcasterPro: prevVerified.farcasterPro || serverFlags.farcasterPro,
-        earlyFid: prevVerified.earlyFid || serverFlags.earlyFid,
-      }))
-
-      setRemotePrice(Number(data.price))
-      setStatusMessage("Discounts synced with server")
-    } catch {
-      setStatusMessage("Could not refresh discounts")
-    } finally {
-      setLoading(false)
+    type DiscountsResponse = {
+      price: number
+      casted?: boolean
+      recast?: boolean
+      tweeted?: boolean
+      followTPC?: boolean
+      followStar?: boolean
+      followChannel?: boolean
+      farcasterPro?: boolean
+      earlyFid?: boolean
     }
+
+    const { data, error } = await safeFetch<DiscountsResponse>(
+      `/api/user-discounts?address=${userAddress}`
+    )
+
+    if (error || !data) {
+      setStatusMessage(error || "Could not refresh discounts")
+      setLoading(false)
+      return
+    }
+
+    const serverFlags: DiscountFlags = {
+      casted: data.casted ?? false,
+      recast: data.recast ?? false,
+      tweeted: data.tweeted ?? false,
+      followTPC: data.followTPC ?? false,
+      followStar: data.followStar ?? false,
+      followChannel: data.followChannel ?? false,
+      farcasterPro: data.farcasterPro ?? false,
+      earlyFid: data.earlyFid ?? false,
+    }
+
+    setDiscounts((prev) => ({
+      casted: prev.casted || serverFlags.casted,
+      recast: prev.recast || serverFlags.recast,
+      tweeted: prev.tweeted || serverFlags.tweeted,
+      followTPC: prev.followTPC || serverFlags.followTPC,
+      followStar: prev.followStar || serverFlags.followStar,
+      followChannel: prev.followChannel || serverFlags.followChannel,
+      farcasterPro: prev.farcasterPro || serverFlags.farcasterPro,
+      earlyFid: prev.earlyFid || serverFlags.earlyFid,
+    }))
+
+    setDiscountVerified((prevVerified) => ({
+      casted: prevVerified.casted || serverFlags.casted,
+      recast: prevVerified.recast || serverFlags.recast,
+      tweeted: prevVerified.tweeted || serverFlags.tweeted,
+      followTPC: prevVerified.followTPC || serverFlags.followTPC,
+      followStar: prevVerified.followStar || serverFlags.followStar,
+      followChannel: prevVerified.followChannel || serverFlags.followChannel,
+      farcasterPro: prevVerified.farcasterPro || serverFlags.farcasterPro,
+      earlyFid: prevVerified.earlyFid || serverFlags.earlyFid,
+    }))
+
+    setRemotePrice(Number(data.price))
+    setStatusMessage("Discounts synced ✓")
+    setLoading(false)
   }
 
   const handleBuyClankton = async () => {
@@ -605,38 +598,33 @@ export default function ClanktonMintPage() {
     setLoading(true)
     setStatusMessage("Preparing your mint…")
 
-    try {
-      const res = await fetch("/api/mint-request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: userAddress }),
-      })
+    // Step 1: Get mint signature from backend
+    const { data: sigData, error: sigError } = await safeFetch<{
+      price: string
+      nonce: number
+      deadline: number
+      signature: string
+      humanReadablePrice: string
+    }>("/api/mint-signature", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: userAddress }),
+    })
 
-      if (!res.ok) {
-        let errPayload: ApiErrorPayload | null = null
-        try {
-          errPayload = (await res.json()) as ApiErrorPayload
-        } catch {
-          // ignore JSON parse
-        }
-        const msg =
-          errPayload?.message ||
-          errPayload?.error ||
-          "Mint failed – try again"
-        setStatusMessage(msg)
-        return
-      }
-
-      await res.json()
-
-      await new Promise((resolve) => setTimeout(resolve, 1200))
-
-      setStatusMessage("Mint successful – you’re now a CLANKTON enjoyooor")
-    } catch {
-      setStatusMessage("Mint failed – try again")
-    } finally {
+    if (sigError || !sigData) {
+      setStatusMessage(sigError || "Could not prepare mint. Please try again.")
       setLoading(false)
+      return
     }
+
+    setStatusMessage(`Price: ${sigData.humanReadablePrice}. Confirm in wallet…`)
+
+    // TODO: Step 2 - Call smart contract to mint
+    // For now, simulate the mint process
+    await new Promise((resolve) => setTimeout(resolve, 1200))
+
+    setStatusMessage("Mint successful – you're now a CLANKTON enjoyooor 🎉")
+    setLoading(false)
   }
 
   const handleArtMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -690,7 +678,7 @@ export default function ClanktonMintPage() {
               <div className="text-xs uppercase tracking-wide text-white/75">
                 Edition of 50&nbsp;&nbsp;✪&nbsp;&nbsp;ERC-721 on Base
               </div>
-              <CountdownPill mintState={mintState} mintStartLabel="Dec 3" />
+              <CountdownPill mintState={mintState} mintStartLabel="Dec 16" />
             </div>
 
             <EditionProgress
@@ -1009,18 +997,17 @@ function computeMintState(): MintState {
   const now = Math.floor(Date.now() / 1000)
 
   if (now < MINT_START) {
+    // Before mint starts - show countdown to start
     const total = MINT_START - now
     const parts = breakdownSeconds(total)
     return { phase: "before", total, ...parts }
   }
 
-  if (now <= MINT_END) {
-    const total = MINT_END - now
-    const parts = breakdownSeconds(total)
-    return { phase: "active", total, ...parts }
-  }
-
-  return { phase: "ended", total: 0, days: 0, hours: 0, minutes: 0, seconds: 0 }
+  // Mint is active - stays open until all 50 editions are sold
+  // (sold out state is handled by checking minted count, not time)
+  const elapsed = now - MINT_START
+  const parts = breakdownSeconds(elapsed)
+  return { phase: "active", total: elapsed, ...parts }
 }
 
 function breakdownSeconds(total: number) {
