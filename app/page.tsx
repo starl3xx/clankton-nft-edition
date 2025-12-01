@@ -379,11 +379,11 @@ export default function ClanktonMintPage() {
     const url = "https://clankton-nft-edition.vercel.app"
     const fullText = `${text} ${url}`
     const encoded = encodeURIComponent(fullText)
-    const warpcastComposeUrl = `https://warpcast.com/~/compose?text=${encoded}`
+    const warpcastComposeUrl = `https://warpcast.com/~/compose?text=${encoded}&embeds[]=${encodeURIComponent(url)}`
 
     try {
       if (isMiniApp) {
-        await sdk.actions.composeCast({ text: fullText })
+        await sdk.actions.composeCast({ text: fullText, embeds: [url] })
       } else {
         window.open(warpcastComposeUrl, "_blank", "noopener,noreferrer")
       }
