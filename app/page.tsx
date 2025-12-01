@@ -17,7 +17,11 @@ const BASE_PRICE = 20_000_000
 const CAST_DISCOUNT = 2_000_000
 const RECAST_DISCOUNT = 4_000_000
 const TWEET_DISCOUNT = 1_000_000
-const FOLLOW_DISCOUNT = 500_000
+const FOLLOW_TPC_DISCOUNT = 750_000
+const FOLLOW_STAR_DISCOUNT = 750_000
+const FOLLOW_CHANNEL_DISCOUNT = 500_000
+const PRO_DISCOUNT = 500_000
+const EARLY_FID_DISCOUNT = 500_000
 const MAX_SUPPLY = 50
 
 // CLANKTON ERC-20 on Base
@@ -355,11 +359,11 @@ export default function ClanktonMintPage() {
     if (discounts.casted) d += CAST_DISCOUNT
     if (discounts.recast) d += RECAST_DISCOUNT
     if (discounts.tweeted) d += TWEET_DISCOUNT
-    if (discounts.followTPC) d += FOLLOW_DISCOUNT
-    if (discounts.followStar) d += FOLLOW_DISCOUNT
-    if (discounts.followChannel) d += FOLLOW_DISCOUNT
-    if (discounts.farcasterPro) d += FOLLOW_DISCOUNT
-    if (discounts.earlyFid) d += FOLLOW_DISCOUNT
+    if (discounts.followTPC) d += FOLLOW_TPC_DISCOUNT
+    if (discounts.followStar) d += FOLLOW_STAR_DISCOUNT
+    if (discounts.followChannel) d += FOLLOW_CHANNEL_DISCOUNT
+    if (discounts.farcasterPro) d += PRO_DISCOUNT
+    if (discounts.earlyFid) d += EARLY_FID_DISCOUNT
     return d
   }, [discounts])
 
@@ -727,13 +731,13 @@ export default function ClanktonMintPage() {
               />
               <DiscountPill
                 label="@papercrane"
-                value="-500K"
+                value="-750K"
                 queued={discounts.followTPC && !discountVerified.followTPC}
                 verified={discountVerified.followTPC}
               />
               <DiscountPill
                 label="@starl3xx"
-                value="-500K"
+                value="-750K"
                 queued={discounts.followStar && !discountVerified.followStar}
                 verified={discountVerified.followStar}
               />
@@ -811,9 +815,9 @@ export default function ClanktonMintPage() {
           <ActionRow
             icon={<Avatar src="/papercrane.jpg" alt="@thepapercrane avatar" />}
             title="Follow @thepapercrane"
-            description="Follow the artist on Farcaster for a 500,000 CLANKTON discount"
+            description="Follow the artist on Farcaster for a 750,000 CLANKTON discount"
             ctaLabel="Follow"
-            badge="500K OFF!"
+            badge="750K OFF!"
             onClick={handleFollowTPC}
             done={discounts.followTPC}
           />
@@ -821,9 +825,9 @@ export default function ClanktonMintPage() {
           <ActionRow
             icon={<Avatar src="/starl3xx.png" alt="@starl3xx.eth avatar" />}
             title="Follow @starl3xx.eth"
-            description="Follow the CLANKTON Clanker for a 500,000 CLANKTON discount"
+            description="Follow the CLANKTON Clanker for a 750,000 CLANKTON discount"
             ctaLabel="Follow"
-            badge="500K OFF!"
+            badge="750K OFF!"
             onClick={handleFollowStar}
             done={discounts.followStar}
           />
