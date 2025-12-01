@@ -34,8 +34,8 @@ const STARL3XX_FID = 6_500 as number
 const RECAST_TARGET_URL = "https://warpcast.com/starl3xx.eth/0xe514b0c0"
 
 // MINT START date in UTC - December 16, 2025 at 17:00 UTC
+// Mint stays open until all 50 editions are sold (no time-based end)
 const MINT_START = Math.floor(Date.UTC(2025, 11, 16, 17, 0, 0) / 1000)
-const MINT_END = MINT_START + 7 * 24 * 60 * 60
 
 type DiscountFlags = {
   casted: boolean
@@ -997,18 +997,17 @@ function computeMintState(): MintState {
   const now = Math.floor(Date.now() / 1000)
 
   if (now < MINT_START) {
+    // Before mint starts - show countdown to start
     const total = MINT_START - now
     const parts = breakdownSeconds(total)
     return { phase: "before", total, ...parts }
   }
 
-  if (now <= MINT_END) {
-    const total = MINT_END - now
-    const parts = breakdownSeconds(total)
-    return { phase: "active", total, ...parts }
-  }
-
-  return { phase: "ended", total: 0, days: 0, hours: 0, minutes: 0, seconds: 0 }
+  // Mint is active - stays open until all 50 editions are sold
+  // (sold out state is handled by checking minted count, not time)
+  const elapsed = now - MINT_START
+  const parts = breakdownSeconds(elapsed)
+  return { phase: "active", total: elapsed, ...parts }
 }
 
 function breakdownSeconds(total: number) {

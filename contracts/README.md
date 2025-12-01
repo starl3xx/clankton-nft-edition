@@ -106,6 +106,7 @@ Contract verification is important for transparency and user trust. Here are det
 export BASESCAN_API_KEY=your_api_key
 
 # Verify the contract
+# Note: mintEndTime is type(uint256).max (no time-based end)
 forge verify-contract \
   <CONTRACT_ADDRESS> \
   contracts/ClanktonNFT.sol:ClanktonNFT \
@@ -114,7 +115,7 @@ forge verify-contract \
     0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07 \
     $SIGNER_ADDRESS \
     1765904400 \
-    1766509200 \
+    $(cast --max-uint) \
     "https://clankton-nft-edition.vercel.app/api/metadata/")
 ```
 
@@ -240,7 +241,7 @@ await nftContract.mint(price, nonce, deadline, signature)
 
 ### Mint Schedule
 - **Start**: December 16, 2025 17:00 UTC (timestamp: `1765904400`)
-- **End**: December 23, 2025 17:00 UTC (timestamp: `1766509200`)
+- **End**: No time-based end - mint stays open until all 50 editions are sold
 
 ### Base Sepolia (Testnet)
 - CLANKTON Token: `TBD`

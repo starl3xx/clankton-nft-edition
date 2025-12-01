@@ -14,8 +14,9 @@ contract DeployClanktonNFT is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
         // Mint window: December 16, 2025 at 17:00 UTC
+        // No end date - mint stays open until all 50 editions are sold
         uint256 mintStartTime = 1765904400; // Dec 16, 2025 17:00:00 UTC
-        uint256 mintEndTime = mintStartTime + 7 days;
+        uint256 mintEndTime = type(uint256).max; // No time-based end
 
         // Initial metadata URI (can be updated later when artwork is ready)
         string memory initialBaseURI = "https://clankton-nft-edition.vercel.app/api/metadata/";
