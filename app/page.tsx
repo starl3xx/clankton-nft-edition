@@ -33,8 +33,8 @@ const STARL3XX_FID = 6_500 as number
 // Recast target cast URL (update this once the mini app is live)
 const RECAST_TARGET_URL = "https://warpcast.com/starl3xx.eth/0xe514b0c0"
 
-// MINT START date in UTC
-const MINT_START = Math.floor(Date.UTC(2025, 11, 3, 0, 0, 0) / 1000)
+// MINT START date in UTC - December 16, 2025 at 17:00 UTC
+const MINT_START = Math.floor(Date.UTC(2025, 11, 16, 17, 0, 0) / 1000)
 const MINT_END = MINT_START + 7 * 24 * 60 * 60
 
 type DiscountFlags = {
@@ -678,7 +678,7 @@ export default function ClanktonMintPage() {
               <div className="text-xs uppercase tracking-wide text-white/75">
                 Edition of 50&nbsp;&nbsp;✪&nbsp;&nbsp;ERC-721 on Base
               </div>
-              <CountdownPill mintState={mintState} mintStartLabel="Dec 3" />
+              <CountdownPill mintState={mintState} mintStartLabel="Dec 16" />
             </div>
 
             <EditionProgress

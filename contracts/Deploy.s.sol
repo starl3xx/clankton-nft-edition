@@ -13,8 +13,8 @@ contract DeployClanktonNFT is Script {
         address signer = vm.envAddress("SIGNER_ADDRESS");
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        // Mint window: December 3, 2025 UTC
-        uint256 mintStartTime = 1764720000; // Dec 3, 2025 00:00:00 UTC
+        // Mint window: December 16, 2025 at 17:00 UTC
+        uint256 mintStartTime = 1765904400; // Dec 16, 2025 17:00:00 UTC
         uint256 mintEndTime = mintStartTime + 7 days;
 
         // Initial metadata URI (can be updated later when artwork is ready)

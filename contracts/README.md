@@ -113,8 +113,8 @@ forge verify-contract \
   --constructor-args $(cast abi-encode "constructor(address,address,uint256,uint256,string)" \
     0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07 \
     $SIGNER_ADDRESS \
-    1764720000 \
-    1765324800 \
+    1765904400 \
+    1766509200 \
     "https://clankton-nft-edition.vercel.app/api/metadata/")
 ```
 
@@ -236,6 +236,11 @@ await nftContract.mint(price, nonce, deadline, signature)
 ### Base Mainnet
 - CLANKTON Token: `0x461DEb53515CaC6c923EeD9Eb7eD5Be80F4e0b07`
 - ClanktonNFT: `TBD (after deployment)`
+- Deployer/Owner: `0x4E448534F7B0e50c4851f60BC5c78716Ae22a137`
+
+### Mint Schedule
+- **Start**: December 16, 2025 17:00 UTC (timestamp: `1765904400`)
+- **End**: December 23, 2025 17:00 UTC (timestamp: `1766509200`)
 
 ### Base Sepolia (Testnet)
 - CLANKTON Token: `TBD`
