@@ -17,16 +17,7 @@ const dmMono = DM_Mono({
   variable: "--font-dm-mono",
 })
 
-const miniappManifest = {
-  version: "1",
-  name: "thepapercrane × $CLANKTON NFT mint",
-  description: "Mint thepapercrane × $CLANKTON NFT with social discounts",
-  iconUrl: "https://clankton-nft-edition.vercel.app/clankton-purple.png",
-  homeUrl: "https://clankton-nft-edition.vercel.app",
-  canonicalDomain: "clankton-nft-edition.vercel.app",
-  requiredChains: ["eip155:8453"],
-  requiredCapabilities: ["actions.ready", "actions.composeCast", "actions.viewProfile", "actions.viewToken", "actions.openUrl"],
-}
+const appUrl = "https://clankton-nft-edition.vercel.app"
 
 export const metadata: Metadata = {
   title: "thepapercrane × $CLANKTON NFT mint",
@@ -52,8 +43,16 @@ export const metadata: Metadata = {
     images: ["https://clankton-nft-edition.vercel.app/clankton-banner.jpg"],
   },
   other: {
-    "fc:frame": "vNext",
-    "fc:miniapp": JSON.stringify(miniappManifest),
+    "fc:miniapp": JSON.stringify({
+      version: "1",
+      name: "Clankton Town Mint",
+      iconUrl: `${appUrl}/icon.png`,
+      homeUrl: appUrl,
+      imageUrl: `${appUrl}/image.png`,
+      buttonTitle: "Open mini app",
+      splashImageUrl: `${appUrl}/splash.png`,
+      splashBackgroundColor: "#8F80AA",
+    }),
   },
 }
 
