@@ -94,11 +94,18 @@ export async function GET(req: NextRequest) {
 
     const price = computePrice(flags)
 
-    return NextResponse.json({
-      basePrice: BASE_PRICE,
-      price,
-      ...flags,
-    })
+    return NextResponse.json(
+      {
+        basePrice: BASE_PRICE,
+        price,
+        ...flags,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=5",
+        },
+      }
+    )
   } catch (err) {
     console.error("/api/user-discounts DB error", err)
 
