@@ -53,6 +53,7 @@ export const metadata: Metadata = {
         title: "Open mini app",
         action: {
           type: "launch_miniapp",
+          name: "Clankton Town Mint",
           url: appUrl,
           splashImageUrl: `${appUrl}/splash.png`,
           splashBackgroundColor: "#8F80AA",
