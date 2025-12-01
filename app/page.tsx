@@ -35,7 +35,7 @@ const PAPERCRANE_FID = 249_958 as number
 const STARL3XX_FID = 6_500 as number
 
 // Recast target cast URL (update this once the mini app is live)
-const RECAST_TARGET_URL = "https://warpcast.com/starl3xx.eth/0xe514b0c0"
+const RECAST_TARGET_URL = "https://farcaster.xyz/starl3xx.eth/0x01bfe832"
 
 // MINT START date in UTC - December 16, 2025 at 17:00 UTC
 // Mint stays open until all 50 editions are sold (no time-based end)
