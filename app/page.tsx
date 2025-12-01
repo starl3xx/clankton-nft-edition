@@ -663,7 +663,7 @@ export default function ClanktonMintPage() {
               <div className="h-full w-full rounded-3xl bg-[#33264D] border border-white/25 art-shine">
                 <Image
                   src="/clankton-town-sample.jpg"
-                  alt="thepapercrane × CLANKTON artwork"
+                  alt="Clankton Town artwork"
                   width={400}
                   height={400}
                   className="h-full w-full object-cover"
@@ -978,7 +978,7 @@ export default function ClanktonMintPage() {
             <div className="w-full aspect-square rounded-3xl overflow-hidden border border-white/25">
               <Image
                 src="/clankton-town-sample.jpg"
-                alt="thepapercrane × CLANKTON artwork (preview)"
+                alt="Clankton Town artwork (preview)"
                 width={800}
                 height={800}
                 className="h-full w-full object-cover"

@@ -20,13 +20,13 @@ const dmMono = DM_Mono({
 const appUrl = "https://clankton-nft-edition.vercel.app"
 
 export const metadata: Metadata = {
-  title: "thepapercrane × $CLANKTON NFT mint",
-  description: "Mint thepapercrane × $CLANKTON NFT with social discounts",
+  title: "Clankton Town Mint",
+  description: "Mint the Clankton Town NFT with social discounts",
   openGraph: {
-    title: "thepapercrane × $CLANKTON NFT mint",
-    description: "Mint thepapercrane × $CLANKTON NFT with social discounts",
+    title: "Clankton Town Mint",
+    description: "Mint the Clankton Town NFT with social discounts",
     url: "https://clankton-nft-edition.vercel.app",
-    siteName: "thepapercrane × $CLANKTON NFT mint",
+    siteName: "Clankton Town Mint",
     images: [
       {
         url: "https://clankton-nft-edition.vercel.app/clankton-banner.jpg",
@@ -38,8 +38,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "thepapercrane × $CLANKTON NFT mint",
-    description: "Mint thepapercrane × $CLANKTON NFT with social discounts.",
+    title: "Clankton Town Mint",
+    description: "Mint the Clankton Town NFT with social discounts.",
     images: ["https://clankton-nft-edition.vercel.app/clankton-banner.jpg"],
   },
   other: {
