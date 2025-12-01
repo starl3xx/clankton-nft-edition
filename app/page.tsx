@@ -891,7 +891,7 @@ export default function ClanktonMintPage() {
               : "Mint with CLANKTON"}
           </button>
           <p className="text-center text-xs text-white/60">
-            Mint live Dec 16, 2025 17:00 UTC
+            Mint begins Dec 16, 2025 17:00 UTC
           </p>
 
           <button
