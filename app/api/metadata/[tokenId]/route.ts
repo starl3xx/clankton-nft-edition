@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from "next/server"
 export const runtime = "edge"
 
 // NFT Collection metadata
-const COLLECTION_NAME = "thepapercrane × CLANKTON"
+const COLLECTION_NAME = "Clankton Town"
 const COLLECTION_DESCRIPTION =
-  "A limited edition of 50 collaborative NFTs between thepapercrane and CLANKTON on Base. Minted with CLANKTON tokens and featuring dynamic discount pricing through social actions."
+  "A limited edition of 50 Clankton Town NFTs by thepapercrane on Base. Minted with CLANKTON tokens and featuring dynamic discount pricing through social actions."
 const MAX_SUPPLY = 50
 
 // Base URL for assets (update this when artwork is ready)
@@ -48,7 +48,7 @@ export async function GET(
       },
       {
         trait_type: "Collection",
-        value: "thepapercrane × CLANKTON",
+        value: "Clankton Town",
       },
       {
         trait_type: "Artist",

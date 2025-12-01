@@ -3,7 +3,9 @@ export const BASE_PRICE = 20_000_000;
 export const CAST_DISCOUNT = 2_000_000;
 export const RECAST_DISCOUNT = 4_000_000;
 export const TWEET_DISCOUNT = 1_000_000;
-export const FOLLOW_DISCOUNT = 500_000;
+export const FOLLOW_TPC_DISCOUNT = 750_000;
+export const FOLLOW_STAR_DISCOUNT = 750_000;
+export const FOLLOW_CHANNEL_DISCOUNT = 500_000;
 export const PRO_DISCOUNT = 500_000;
 export const EARLY_FID_DISCOUNT = 500_000;
 
@@ -23,9 +25,9 @@ export function computeDiscount(flags: DiscountFlags): number {
   if (flags.casted) d += CAST_DISCOUNT;
   if (flags.recast) d += RECAST_DISCOUNT;
   if (flags.tweeted) d += TWEET_DISCOUNT;
-  if (flags.followTPC) d += FOLLOW_DISCOUNT;
-  if (flags.followStar) d += FOLLOW_DISCOUNT;
-  if (flags.followChannel) d += FOLLOW_DISCOUNT;
+  if (flags.followTPC) d += FOLLOW_TPC_DISCOUNT;
+  if (flags.followStar) d += FOLLOW_STAR_DISCOUNT;
+  if (flags.followChannel) d += FOLLOW_CHANNEL_DISCOUNT;
   if (flags.farcasterPro) d += PRO_DISCOUNT;
   if (flags.earlyFid) d += EARLY_FID_DISCOUNT;
   return d;

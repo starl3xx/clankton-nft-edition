@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           notification: {
             title: "🎉 CLANKTON Mint is LIVE!",
-            body: "The thepapercrane × $CLANKTON NFT mint is now live! Your discounts are ready.",
+            body: "The Clankton Town NFT mint is now live! Your discounts are ready.",
             target_url: "https://clankton-nft-edition.vercel.app",
           },
           target_fids: targetFids.length > 0 ? targetFids : [], // Empty = all users

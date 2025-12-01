@@ -17,7 +17,11 @@ const BASE_PRICE = 20_000_000
 const CAST_DISCOUNT = 2_000_000
 const RECAST_DISCOUNT = 4_000_000
 const TWEET_DISCOUNT = 1_000_000
-const FOLLOW_DISCOUNT = 500_000
+const FOLLOW_TPC_DISCOUNT = 750_000
+const FOLLOW_STAR_DISCOUNT = 750_000
+const FOLLOW_CHANNEL_DISCOUNT = 500_000
+const PRO_DISCOUNT = 500_000
+const EARLY_FID_DISCOUNT = 500_000
 const MAX_SUPPLY = 50
 
 // CLANKTON ERC-20 on Base
@@ -355,11 +359,11 @@ export default function ClanktonMintPage() {
     if (discounts.casted) d += CAST_DISCOUNT
     if (discounts.recast) d += RECAST_DISCOUNT
     if (discounts.tweeted) d += TWEET_DISCOUNT
-    if (discounts.followTPC) d += FOLLOW_DISCOUNT
-    if (discounts.followStar) d += FOLLOW_DISCOUNT
-    if (discounts.followChannel) d += FOLLOW_DISCOUNT
-    if (discounts.farcasterPro) d += FOLLOW_DISCOUNT
-    if (discounts.earlyFid) d += FOLLOW_DISCOUNT
+    if (discounts.followTPC) d += FOLLOW_TPC_DISCOUNT
+    if (discounts.followStar) d += FOLLOW_STAR_DISCOUNT
+    if (discounts.followChannel) d += FOLLOW_CHANNEL_DISCOUNT
+    if (discounts.farcasterPro) d += PRO_DISCOUNT
+    if (discounts.earlyFid) d += EARLY_FID_DISCOUNT
     return d
   }, [discounts])
 
@@ -371,7 +375,7 @@ export default function ClanktonMintPage() {
 
   const handleOpenCastIntent = async () => {
     const text =
-      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
+      'Locking in my $CLANKTON discounts for the limited-edition "Clankton Town" NFT by @thepapercrane ✨ Only 50 available — mint opens soon! 👇'
     const url = "https://clankton-nft-edition.vercel.app"
     const fullText = `${text} ${url}`
     const encoded = encodeURIComponent(fullText)
@@ -420,8 +424,8 @@ export default function ClanktonMintPage() {
 
   const handleOpenTweetIntent = () => {
     const text =
-      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
-    const url = encodeURIComponent("https://clankton-nft-edition.vercel.app")
+      'Locking in my $CLANKTON discounts for the limited-edition "Clankton Town" NFT by @rickacrane on @base ✨ Only 50 available — mint opens soon! 👇'
+    const url = encodeURIComponent("https://farcaster.xyz/~/channel/clankton")
     const fullText = encodeURIComponent(`${text} ${decodeURIComponent(url)}`)
 
     window.open(
@@ -663,7 +667,7 @@ export default function ClanktonMintPage() {
               <div className="h-full w-full rounded-3xl bg-[#33264D] border border-white/25 art-shine">
                 <Image
                   src="/clankton-town-sample.jpg"
-                  alt="thepapercrane × CLANKTON artwork"
+                  alt="Clankton Town artwork"
                   width={400}
                   height={400}
                   className="h-full w-full object-cover"
@@ -727,13 +731,13 @@ export default function ClanktonMintPage() {
               />
               <DiscountPill
                 label="@papercrane"
-                value="-500K"
+                value="-750K"
                 queued={discounts.followTPC && !discountVerified.followTPC}
                 verified={discountVerified.followTPC}
               />
               <DiscountPill
                 label="@starl3xx"
-                value="-500K"
+                value="-750K"
                 queued={discounts.followStar && !discountVerified.followStar}
                 verified={discountVerified.followStar}
               />
@@ -811,9 +815,9 @@ export default function ClanktonMintPage() {
           <ActionRow
             icon={<Avatar src="/papercrane.jpg" alt="@thepapercrane avatar" />}
             title="Follow @thepapercrane"
-            description="Follow the artist on Farcaster for a 500,000 CLANKTON discount"
+            description="Follow the artist on Farcaster for a 750,000 CLANKTON discount"
             ctaLabel="Follow"
-            badge="500K OFF!"
+            badge="750K OFF!"
             onClick={handleFollowTPC}
             done={discounts.followTPC}
           />
@@ -821,9 +825,9 @@ export default function ClanktonMintPage() {
           <ActionRow
             icon={<Avatar src="/starl3xx.png" alt="@starl3xx.eth avatar" />}
             title="Follow @starl3xx.eth"
-            description="Follow the CLANKTON Clanker for a 500,000 CLANKTON discount"
+            description="Follow the CLANKTON Clanker for a 750,000 CLANKTON discount"
             ctaLabel="Follow"
-            badge="500K OFF!"
+            badge="750K OFF!"
             onClick={handleFollowStar}
             done={discounts.followStar}
           />
@@ -978,7 +982,7 @@ export default function ClanktonMintPage() {
             <div className="w-full aspect-square rounded-3xl overflow-hidden border border-white/25">
               <Image
                 src="/clankton-town-sample.jpg"
-                alt="thepapercrane × CLANKTON artwork (preview)"
+                alt="Clankton Town artwork (preview)"
                 width={800}
                 height={800}
                 className="h-full w-full object-cover"

@@ -9,8 +9,8 @@
     "splashImageUrl": "https://clankton-nft-edition.vercel.app/splash.png",
     "splashBackgroundColor": "#8F80AA",
     "webhookUrl": "https://clankton-nft-edition.vercel.app/api/webhook",
-    "subtitle": "Limited-edition $CLANKTON NFT",
-    "description": "Lock in your discount for the upcoming mint of Clankton Town, a stunning 50-edition NFT by the legend @thepapercrane and payable in $CLANKTON",
+    "subtitle": "Limited-edition CLANKTON NFT",
+    "description": "Lock in your discount for the upcoming mint of Clankton Town, a stunning 50-edition NFT by thepapercrane and payable in CLANKTON",
     "primaryCategory": "art-creativity",
     "screenshotUrls": [
       "https://clankton-nft-edition.vercel.app/screenshot1.png"
@@ -19,7 +19,8 @@
     "tagline": "Lock in your mint discount!",
     "ogTitle": "Clankton Town NFT Mint",
     "ogDescription": "Lock in your discount for Clankton Town, a 50-edition NFT by thepapercrane payable in CLANKTON",
-    "ogImageUrl": "https://clankton-nft-edition.vercel.app/hero.png"
+    "ogImageUrl": "https://clankton-nft-edition.vercel.app/hero.png",
+    "castShareUrl": "https://warpcast.com/~/compose?text=Locked%20in%20my%20%24CLANKTON%20discounts%20for%20the%20limited-edition%20%E2%80%9CClankton%20Town%E2%80%9D%20NFT%20by%20%40thepapercrane%20%E2%9C%A8%20Only%2050%20available%20%E2%80%94%20mint%20opens%20soon!%20%F0%9F%8E%A8&embeds=https://clankton-nft-edition.vercel.app"
   },
   "accountAssociation": {
     "header": "eyJmaWQiOjY1MDAsInR5cGUiOiJhdXRoIiwia2V5IjoiMHgzQ2VlNjMwMDc1REM1ODZENUJGZEZBODFGM2EyZDc3OTgwRjBkMjIzIn0",
