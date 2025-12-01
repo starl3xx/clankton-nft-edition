@@ -371,7 +371,7 @@ export default function ClanktonMintPage() {
 
   const handleOpenCastIntent = async () => {
     const text =
-      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
+      'Locking in my $CLANKTON discounts for the limited-edition "Clankton Town" NFT by @thepapercrane ✨ Only 50 available — mint opens soon! 👇'
     const url = "https://clankton-nft-edition.vercel.app"
     const fullText = `${text} ${url}`
     const encoded = encodeURIComponent(fullText)
@@ -420,8 +420,8 @@ export default function ClanktonMintPage() {
 
   const handleOpenTweetIntent = () => {
     const text =
-      "Minting the CLANKTON NFT edition on Base – pay in $CLANKTON #CLANKTONMint"
-    const url = encodeURIComponent("https://clankton-nft-edition.vercel.app")
+      'Locking in my $CLANKTON discounts for the limited-edition "Clankton Town" NFT by @rickacrane on @base ✨ Only 50 available — mint opens soon! 👇'
+    const url = encodeURIComponent("https://farcaster.xyz/~/channel/clankton")
     const fullText = encodeURIComponent(`${text} ${decodeURIComponent(url)}`)
 
     window.open(
