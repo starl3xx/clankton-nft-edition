@@ -8,8 +8,9 @@
     "buttonTitle": "Open mini app",
     "splashImageUrl": "https://clankton-nft-edition.vercel.app/splash.png",
     "splashBackgroundColor": "#8F80AA",
-    "subtitle": "Limited-edition $CLANKTON NFT",
-    "description": "Lock in your discount for the upcoming mint of Clankton Town, a stunning 50-edition NFT by the legend @thepapercrane and payable in $CLANKTON",
+    "webhookUrl": "https://clankton-nft-edition.vercel.app/api/webhook",
+    "subtitle": "Limited-edition CLANKTON NFT",
+    "description": "Lock in your discount for the upcoming mint of Clankton Town, a stunning 50-edition NFT by thepapercrane and payable in CLANKTON",
     "primaryCategory": "art-creativity",
     "screenshotUrls": [
       "https://clankton-nft-edition.vercel.app/screenshot1.png"
