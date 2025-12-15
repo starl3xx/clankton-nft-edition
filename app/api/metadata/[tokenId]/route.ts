@@ -11,7 +11,7 @@ const MAX_SUPPLY = 50
 
 // Base URL for assets (update this when artwork is ready)
 const BASE_URL = "https://clankton-nft-edition.vercel.app"
-const ARTWORK_URL = `${BASE_URL}/papercrane-sample.jpg` // Update with final artwork IPFS or URL
+const ARTWORK_URL = "ipfs://bafybeiaqig7rvtfyodb5vakktavoaobfbqiry6jtdgubpqs44y27nek7my"
 
 /**
  * GET /api/metadata/[tokenId]
