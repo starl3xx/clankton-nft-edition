@@ -42,24 +42,35 @@ export async function GET(
     external_url: `${BASE_URL}`,
     attributes: [
       {
-        trait_type: "Edition",
-        value: tokenId,
-        max_value: MAX_SUPPLY,
-      },
-      {
-        trait_type: "Collection",
-        value: "Clankton Town",
-      },
-      {
         trait_type: "Artist",
         value: "thepapercrane",
       },
       {
-        trait_type: "Network",
+        trait_type: "Edition",
+        value: "Clankton Town",
+      },
+      {
+        trait_type: "Edition Size",
+        value: MAX_SUPPLY,
+      },
+      {
+        trait_type: "Edition Number",
+        value: tokenId,
+      },
+      {
+        trait_type: "Year",
+        value: 2025,
+      },
+      {
+        trait_type: "Chain",
         value: "Base",
       },
       {
-        trait_type: "Payment Token",
+        trait_type: "Medium",
+        value: "Digital illustration",
+      },
+      {
+        trait_type: "Original Mint Currency",
         value: "CLANKTON",
       },
     ],
