@@ -890,6 +890,9 @@ export default function ClanktonMintPage() {
               ? "Minting…"
               : "Mint with CLANKTON"}
           </button>
+          <p className="text-center text-xs text-white/60">
+            Mint begins Dec 16, 2025 17:00 UTC
+          </p>
 
           <button
             className="w-full rounded-2xl bg-white text-[#33264D] text-sm px-4 py-3 text-center font-semibold hover:bg-[#C9FF5B] transition"
