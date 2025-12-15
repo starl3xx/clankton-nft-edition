@@ -11,7 +11,7 @@ const MAX_SUPPLY = 50
 
 // Base URL for assets (update this when artwork is ready)
 const BASE_URL = "https://clankton-nft-edition.vercel.app"
-const ARTWORK_URL = `${BASE_URL}/papercrane-sample.jpg` // Update with final artwork IPFS or URL
+const ARTWORK_URL = "ipfs://bafybeiaqig7rvtfyodb5vakktavoaobfbqiry6jtdgubpqs44y27nek7my"
 
 /**
  * GET /api/metadata/[tokenId]
@@ -42,24 +42,35 @@ export async function GET(
     external_url: `${BASE_URL}`,
     attributes: [
       {
-        trait_type: "Edition",
-        value: tokenId,
-        max_value: MAX_SUPPLY,
-      },
-      {
-        trait_type: "Collection",
-        value: "Clankton Town",
-      },
-      {
         trait_type: "Artist",
         value: "thepapercrane",
       },
       {
-        trait_type: "Network",
+        trait_type: "Edition",
+        value: "Clankton Town",
+      },
+      {
+        trait_type: "Edition Size",
+        value: MAX_SUPPLY,
+      },
+      {
+        trait_type: "Edition Number",
+        value: tokenId,
+      },
+      {
+        trait_type: "Year",
+        value: 2025,
+      },
+      {
+        trait_type: "Chain",
         value: "Base",
       },
       {
-        trait_type: "Payment Token",
+        trait_type: "Medium",
+        value: "Digital illustration",
+      },
+      {
+        trait_type: "Original Mint Currency",
         value: "CLANKTON",
       },
     ],

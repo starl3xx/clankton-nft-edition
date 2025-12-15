@@ -9,9 +9,15 @@ import {
 } from "react"
 import type React from "react"
 import Image from "next/image"
-import { useAccount, useBalance, useConnect } from "wagmi"
+import { useAccount, useBalance, useConnect, useWriteContract, useReadContract } from "wagmi"
 import { sdk } from "@farcaster/miniapp-sdk"
 import { parseApiError, safeFetch } from "@/lib/errors"
+import {
+  NFT_CONTRACT_ADDRESS,
+  CLANKTON_TOKEN_ADDRESS as CLANKTON_CONTRACT,
+  clanktonNftAbi,
+  erc20Abi,
+} from "@/lib/contracts"
 
 const BASE_PRICE = 20_000_000
 const CAST_DISCOUNT = 2_000_000
@@ -147,6 +153,19 @@ export default function ClanktonMintPage() {
   const [isMiniApp, setIsMiniApp] = useState(false)
   const [viewerFid, setViewerFid] = useState<number | null>(null)
   const [bootstrappedFollows, setBootstrappedFollows] = useState(false)
+
+  // Contract write hooks
+  const { writeContractAsync: approveAsync } = useWriteContract()
+  const { writeContractAsync: mintAsync } = useWriteContract()
+
+  // Check current allowance
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: CLANKTON_CONTRACT,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: userAddress && NFT_CONTRACT_ADDRESS ? [userAddress, NFT_CONTRACT_ADDRESS] : undefined,
+    query: { enabled: !!userAddress && !!NFT_CONTRACT_ADDRESS },
+  })
 
   // countdown
   useEffect(() => {
@@ -623,11 +642,51 @@ export default function ClanktonMintPage() {
 
     setStatusMessage(`Price: ${sigData.humanReadablePrice}. Confirm in wallet…`)
 
-    // TODO: Step 2 - Call smart contract to mint
-    // For now, simulate the mint process
-    await new Promise((resolve) => setTimeout(resolve, 1200))
+    try {
+      const priceInWei = BigInt(sigData.price)
 
-    setStatusMessage("Mint successful – you're now a CLANKTON enjoyooor 🎉")
+      // Step 2: Check allowance and approve if needed
+      await refetchAllowance()
+      const currentAllowance = allowance ?? BigInt(0)
+
+      if (currentAllowance < priceInWei) {
+        setStatusMessage("Approving CLANKTON spending…")
+        await approveAsync({
+          address: CLANKTON_CONTRACT,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [NFT_CONTRACT_ADDRESS, priceInWei],
+        })
+      }
+
+      // Step 3: Call mint on the NFT contract
+      setStatusMessage("Minting your NFT…")
+      await mintAsync({
+        address: NFT_CONTRACT_ADDRESS,
+        abi: clanktonNftAbi,
+        functionName: "mint",
+        args: [
+          priceInWei,
+          BigInt(sigData.nonce),
+          BigInt(sigData.deadline),
+          sigData.signature as `0x${string}`,
+        ],
+      })
+
+      setStatusMessage("Mint successful – you're now a CLANKTON enjoyooor 🎉")
+    } catch (err) {
+      console.error("Mint error:", err)
+      const message = err instanceof Error ? err.message : "Mint failed"
+      // Simplify common error messages
+      if (message.includes("User rejected")) {
+        setStatusMessage("Transaction cancelled")
+      } else if (message.includes("insufficient")) {
+        setStatusMessage("Insufficient CLANKTON balance")
+      } else {
+        setStatusMessage("Mint failed. Please try again.")
+      }
+    }
+
     setLoading(false)
   }
 

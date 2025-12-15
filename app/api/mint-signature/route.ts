@@ -90,7 +90,9 @@ export async function POST(req: NextRequest) {
     const CAST_DISCOUNT = 2_000_000
     const RECAST_DISCOUNT = 4_000_000
     const TWEET_DISCOUNT = 1_000_000
-    const FOLLOW_DISCOUNT = 500_000
+    const FOLLOW_TPC_DISCOUNT = 750_000
+    const FOLLOW_STAR_DISCOUNT = 750_000
+    const FOLLOW_CHANNEL_DISCOUNT = 500_000
     const PRO_DISCOUNT = 500_000
     const EARLY_FID_DISCOUNT = 500_000
 
@@ -98,9 +100,9 @@ export async function POST(req: NextRequest) {
     if (discounts.casted) price -= CAST_DISCOUNT
     if (discounts.recast) price -= RECAST_DISCOUNT
     if (discounts.tweeted) price -= TWEET_DISCOUNT
-    if (discounts.follow_tpc) price -= FOLLOW_DISCOUNT
-    if (discounts.follow_star) price -= FOLLOW_DISCOUNT
-    if (discounts.follow_channel) price -= FOLLOW_DISCOUNT
+    if (discounts.follow_tpc) price -= FOLLOW_TPC_DISCOUNT
+    if (discounts.follow_star) price -= FOLLOW_STAR_DISCOUNT
+    if (discounts.follow_channel) price -= FOLLOW_CHANNEL_DISCOUNT
     if (discounts.farcaster_pro) price -= PRO_DISCOUNT
     if (discounts.early_fid) price -= EARLY_FID_DISCOUNT
 
