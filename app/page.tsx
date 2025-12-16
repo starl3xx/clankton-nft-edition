@@ -141,7 +141,6 @@ export default function ClanktonMintPage() {
     minutes: 0,
     seconds: 0,
   })
-  const [minted] = useState(0)
   const [showHow, setShowHow] = useState(false)
   const [artTilt, setArtTilt] = useState<{ x: number; y: number }>({
     x: 0,
@@ -166,6 +165,21 @@ export default function ClanktonMintPage() {
     args: userAddress && NFT_CONTRACT_ADDRESS ? [userAddress, NFT_CONTRACT_ADDRESS] : undefined,
     query: { enabled: !!userAddress && !!NFT_CONTRACT_ADDRESS },
   })
+
+  // Read total minted from NFT contract
+  const { data: totalMintedData } = useReadContract({
+    address: NFT_CONTRACT_ADDRESS,
+    abi: clanktonNftAbi,
+    functionName: "totalMinted",
+    query: {
+      enabled: !!NFT_CONTRACT_ADDRESS,
+      refetchInterval: 10_000, // Poll every 10 seconds
+    },
+  })
+
+  // Derive minted count and sold out status from contract data
+  const minted = totalMintedData !== undefined ? Number(totalMintedData) : 0
+  const isSoldOut = minted >= MAX_SUPPLY
 
   // countdown
   useEffect(() => {
@@ -609,6 +623,10 @@ export default function ClanktonMintPage() {
       setStatusMessage("Connect your Farcaster wallet to mint")
       return
     }
+    if (isSoldOut) {
+      setStatusMessage("All 50 editions have been minted!")
+      return
+    }
     if (isEnded) {
       setStatusMessage("Mint is over")
       return
@@ -938,10 +956,12 @@ export default function ClanktonMintPage() {
         <div className="space-y-2">
           <button
             className="w-full rounded-2xl bg-[#C9FF5B] text-black font-semibold px-4 py-3 text-center text-sm shadow-[0_0_30px_rgba(201,255,91,0.6)] hover:bg-[#D7FF86] transition disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading || isEnded || isNotStarted}
+            disabled={loading || isEnded || isNotStarted || isSoldOut}
             onClick={handleMint}
           >
-            {isEnded
+            {isSoldOut
+              ? "SOLD OUT"
+              : isEnded
               ? "Mint ended"
               : isNotStarted
               ? "Mint not live yet"

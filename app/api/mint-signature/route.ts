@@ -4,6 +4,8 @@ import { ethers } from "ethers"
 import { apiError } from "@/lib/api"
 import { rateLimit } from "@/lib/rate-limit"
 
+export const runtime = "nodejs"
+
 function isValidEthAddress(addr: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(addr)
 }
