@@ -759,7 +759,7 @@ export default function ClanktonMintPage() {
               <div className="text-xs uppercase tracking-wide text-white/75">
                 Edition of 50&nbsp;&nbsp;✪&nbsp;&nbsp;ERC-721 on Base
               </div>
-              <CountdownPill mintState={mintState} mintStartLabel="Dec 16" />
+              <CountdownPill mintState={mintState} mintStartLabel="Dec 16" isSoldOut={isSoldOut} />
             </div>
 
             <EditionProgress
@@ -1107,10 +1107,20 @@ function breakdownSeconds(total: number) {
 function CountdownPill({
   mintState,
   mintStartLabel,
+  isSoldOut,
 }: {
   mintState: MintState
   mintStartLabel: string
+  isSoldOut: boolean
 }) {
+  if (isSoldOut) {
+    return (
+      <span className="px-2 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-500/40 text-xs">
+        SOLD OUT
+      </span>
+    )
+  }
+
   if (mintState.phase === "ended") {
     return (
       <span className="px-2 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-500/40 text-xs">
@@ -1130,9 +1140,8 @@ function CountdownPill({
   }
 
   return (
-    <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text-white">
-      MINT IS LIVE&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;{mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
-      {mintState.seconds}s left
+    <span className="px-2 py-1 rounded-full bg-[#C9FF5B]/20 text-[#C9FF5B] border border-[#C9FF5B]/40 text-xs">
+      Mint is LIVE
     </span>
   )
 }
