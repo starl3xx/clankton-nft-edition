@@ -1131,8 +1131,8 @@ function CountdownPill({
 
   return (
     <span className="px-2 py-1 rounded-full bg-white/15 border border-white/35 text-xs text-white">
-      Mint ends in {mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
-      {mintState.seconds}s
+      MINT IS LIVE&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;{mintState.days}d {mintState.hours}h {mintState.minutes}m{" "}
+      {mintState.seconds}s left
     </span>
   )
 }
