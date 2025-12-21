@@ -39,12 +39,14 @@ export default function AdminWithdrawPage() {
     ? (Number(contractBalance) / 1e18).toLocaleString("en-US", { maximumFractionDigits: 0 })
     : "0"
 
-  const handleConnect = () => {
-    const connector = connectors[0]
-    if (connector) {
-      connect({ connector })
-    }
+  const handleConnect = (connector: (typeof connectors)[number]) => {
+    connect({ connector })
   }
+
+  // Filter to browser-compatible connectors (exclude Farcaster miniapp on web)
+  const browserConnectors = connectors.filter(
+    (c) => c.id !== "farcasterMiniApp"
+  )
 
   const handleWithdrawAll = async () => {
     if (!address || !isOwner) {
@@ -90,12 +92,17 @@ export default function AdminWithdrawPage() {
           {isConnected && address ? (
             <div className="font-mono text-sm break-all">{address}</div>
           ) : (
-            <button
-              onClick={handleConnect}
-              className="w-full rounded-xl bg-white text-[#33264D] px-4 py-2 font-semibold hover:bg-[#C9FF5B] transition"
-            >
-              Connect Wallet
-            </button>
+            <div className="space-y-2">
+              {browserConnectors.map((connector) => (
+                <button
+                  key={connector.id}
+                  onClick={() => handleConnect(connector)}
+                  className="w-full rounded-xl bg-white text-[#33264D] px-4 py-2 font-semibold hover:bg-[#C9FF5B] transition"
+                >
+                  {connector.name}
+                </button>
+              ))}
+            </div>
           )}
         </div>
 

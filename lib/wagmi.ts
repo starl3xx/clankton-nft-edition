@@ -3,6 +3,7 @@
 
 import { http, createConfig } from "wagmi"
 import { base } from "wagmi/chains"
+import { injected, coinbaseWallet } from "wagmi/connectors"
 import { farcasterMiniApp as miniAppConnector } from "@farcaster/miniapp-wagmi-connector"
 
 export const wagmiConfig = createConfig({
@@ -12,5 +13,7 @@ export const wagmiConfig = createConfig({
   },
   connectors: [
     miniAppConnector(),
+    injected(), // MetaMask, Rabby, etc.
+    coinbaseWallet({ appName: "Clankton NFT" }),
   ],
 })
