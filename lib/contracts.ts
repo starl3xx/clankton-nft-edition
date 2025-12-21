@@ -52,4 +52,40 @@ export const erc20Abi = [
     ],
     outputs: [{ name: "", type: "uint256" }],
   },
+  {
+    name: "balanceOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const
+
+// Admin functions for withdrawing funds
+export const clanktonNftAdminAbi = [
+  {
+    name: "owner",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    name: "withdrawAllClankton",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "_to", type: "address" }],
+    outputs: [],
+  },
+  {
+    name: "withdrawTokens",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_token", type: "address" },
+      { name: "_to", type: "address" },
+      { name: "_amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
 ] as const
